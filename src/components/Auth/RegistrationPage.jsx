@@ -16,7 +16,7 @@ import {
 import { auth, db } from '../../configs/firebase';
 import GoogleAuthButton from './GoogleAuthButton';
 import RegistrationLeftPanel from './RegistrationLeftPanel';
-
+import humanFirebaseError from "../../configs/firebaseErrors";
 import '../../styles/design-tokens.css';
 import '../../styles/auth.css';
 /*****************************************************************
@@ -52,7 +52,7 @@ const handleRegister = async (e) => {
       navigate('/verify-email');
     } catch (err) {
       console.error(err);
-      setError(err.message);
+      setError(humanFirebaseError(err));
     } finally {
       setLoading(false);
     }

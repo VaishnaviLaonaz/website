@@ -15,6 +15,12 @@ import UserDashboardProfilePage         from '../components/Pages/UserDashboardP
 import EditProfilePageOnProfilePage     from '../components/Pages/EditProfilePageOnProfilePage';
 import ThirdPersonView                  from '../components/Pages/ThirdPersonView';
 import ArticlesPage from '../components/cards/ArticlesPage';
+import LaonazCommunityGuide from "../components/Pages/LaonazCommunityGuide";
+
+import TermsPage from '../components/services/TermsPage';
+import PrivacyPage from '../components/services/PrivacyPage';
+import SecurityPage from '../components/services/SecurityPage';
+import CookiesPage from '../components/services/CookiesPage';
 /* guards */
 import { RequireAuth}       from './route-guards';
 
@@ -26,16 +32,23 @@ export default function Router() {
       <Route path="/"        element={<Home />} />
       <Route path="/home"    element={<Home />} />
       <Route path="/about"   element={<About />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/security" element={<SecurityPage />} />
+      <Route path="/cookies" element={<CookiesPage />} />
+      <Route path="/community-guide" element={<LaonazCommunityGuide />} />
       <Route path="/u/:username" element={<ThirdPersonView />} />
       <Route path="/article/:articleId" element={<ArticleDetailPage />} />
       <Route path="/articlesPage" element={<ArticlesPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      
       {/* ── GUEST-ONLY (hide once logged-in) ──────────────────── */}
       <Route>
         <Route path="/login"           element={<LoginPage />} />
         <Route path="/register"        element={<RegistrationPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
       </Route>
+      
 
       {/* ── AUTH-REQUIRED ─────────────────────────────────────── */}
       <Route element={<RequireAuth />}>
@@ -50,7 +63,9 @@ export default function Router() {
         {/* <Route path="/article/new" element={<WriteArticle />} /> */}
         <Route path="/write/edit/:id" element={<WriteArticle />} />
 
-        {/* TODO: once you create them, simply add here
+       
+
+        {/* TODO: once create them, simply add here
               <Route path="/followers"  element={<FollowersPage />} />
               <Route path="/following"  element={<FollowingPage />} />
               <Route path="/bookmarks"  element={<BookmarksPage />} />

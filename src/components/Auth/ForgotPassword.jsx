@@ -5,6 +5,7 @@ import RegistrationLeftPanel from './RegistrationLeftPanel';
 import { resetPassword } from '../../configs/firebase';  
 import '../../styles/design-tokens.css';
 import '../../styles/auth.css';
+import humanFirebaseError from "../../configs/firebaseErrors";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ export default function ForgotPassword() {
       await resetPassword(email.trim());
       setStep(2);                   // success screen
     } catch (err) {
-      alert(err.message);
+      alert(humanFirebaseError(err));
     } finally {
       setSending(false);
     }

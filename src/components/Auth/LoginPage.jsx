@@ -9,6 +9,7 @@ import GoogleAuthButton from './GoogleAuthButton';
 import RegistrationLeftPanel from './RegistrationLeftPanel';
 import '../../styles/design-tokens.css';
 import '../../styles/auth.css';
+import humanFirebaseError from "../../configs/firebaseErrors";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -42,13 +43,13 @@ export default function LoginPage() {
       switch (err.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
-          setError('Incorrect email or password');
+          setError(humanFirebaseError(err));
           break;
         case 'auth/invalid-email':
-          setError('Please enter a valid email address');
+          setError(humanFirebaseError(err));
           break;
         default:
-          setError('Something went wrong, please try again');
+          setError(humanFirebaseError(err));
       }
     } finally{
       setLoading(false); 

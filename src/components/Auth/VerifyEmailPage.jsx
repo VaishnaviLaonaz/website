@@ -24,6 +24,8 @@ import { auth } from '../../configs/firebase';
 import RegistrationLeftPanel from './RegistrationLeftPanel';
 import '../../styles/design-tokens.css';
 import '../../styles/auth.css';
+import humanFirebaseError from "../../configs/firebaseErrors";
+
 
 export default function VerifyEmailPage() {
   const [phase, setPhase] = useState('checking'); // checking | success | error | waiting
@@ -85,7 +87,7 @@ export default function VerifyEmailPage() {
       alert('Verification email resent.');
     } catch (err) {
       console.error(err);
-      setError(err.message);
+      setError(humanFirebaseError(err));
       setPhase('error');
     }
   };

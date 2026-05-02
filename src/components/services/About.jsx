@@ -157,7 +157,7 @@ export default function About() {
   const heroFont = { fontSize: "clamp(3rem, 8vw, 8rem)", lineHeight: 0.9 };
 
   return (
-    <main style={{ background: "#f5f6eb" }}>
+    <main style={{ background: "var(--header-bg)" }}>
       {/* ───────── Hero ───────── */}
       <section className="text-center pt-5">
         <MDBContainer>

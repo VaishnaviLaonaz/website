@@ -143,7 +143,7 @@ return (
       <MDBContainer fluid>
         <div className="header-inner">
           {/* logo (left) */}
-          <Link to="/" className="text-decoration-none me-auto ps-lg-5">
+          <Link to="/" className="text-decoration-none me-auto">
             <Logo />
           </Link>
 

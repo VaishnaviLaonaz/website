@@ -14,7 +14,7 @@ import { doc, getDoc } from "firebase/firestore";
 
 import homepageImg from '../../images/homepage.png';
 import communityAvatar from '../../images/notifyicon.png';
-
+import CommunitySubscribeSection from '../Pages/CommunitySubscribeSection';
 import '../../styles/components.css';
 
 
@@ -178,7 +178,7 @@ export default function Home() {
                 </div>
 
                 <div className="d-flex align-items-center gap-3">
-                  <Link to="/laonazcommunityprofile">
+                  <Link to="/community-guide">
                     <img
                       src={communityAvatar}
                       alt="LAONAZ Community"
@@ -189,7 +189,7 @@ export default function Home() {
                   </Link>
                   <div>
                     <Link
-                      to="/laonazcommunityprofile"
+                      to="/community-guide"
                       className=" text-heading fw-semibold text-decoration-none"
                       
                     >
@@ -342,6 +342,10 @@ export default function Home() {
           )}
         </MDBContainer>
       </section>
+      <CommunitySubscribeSection
+        youtubeUrl="https://www.youtube.com/@your-channel"
+        instagramUrl="https://www.instagram.com/your-page"
+      />
     </main>
   );
 }

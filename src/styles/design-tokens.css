@@ -170,7 +170,7 @@ article.card p  { composes: u-body text-primary;  }
   /* 🔁 Set both to your design backgrounds */
   --header-bg     : var(--clr-field-mist);  /* #F1F1E6, matches pages */
   --header-height : 88px;
-  --footer-bg     : var(--clr-soft-cloud);  /* #F4F4EC full-bleed */
+  --footer-bg     : var(--clr-field-mist);  /* #F4F4EC full-bleed */
 
   --radius-s: 8px; --radius-m: 12px; --radius-l: 16px; --radius-xl: 24px;
   --shadow-soft: 0 4px 12px rgba(0,0,0,.06);

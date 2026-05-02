@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { signInWithPopup, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { MDBBtn, MDBIcon } from 'mdb-react-ui-kit';
+import humanFirebaseError from "../../configs/firebaseErrors";
 
 import { auth, db, googleProvider } from '../../configs/firebase';
 
@@ -54,7 +55,7 @@ export default function GoogleAuthButton({
           setError('Account exists with a different sign‑in method.');
         }
       } else {
-        setError(err.message);
+        setError(humanFirebaseError(err));
       }
     } finally {
       setLoading(false);

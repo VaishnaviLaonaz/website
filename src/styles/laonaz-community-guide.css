@@ -1,0 +1,389 @@
+.laonaz-guide-page {
+  width: 100%;
+  background: var(--header-bg);
+  color: #111111;
+}
+
+.laonaz-guide-hero {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 88px 76px 72px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 56px;
+  align-items: center;
+}
+
+.laonaz-guide-kicker {
+  margin: 0 0 16px;
+  color: #9f8500;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.laonaz-guide-hero h1 {
+  max-width: 850px;
+  margin: 0;
+  color: #111111;
+  font-size: clamp(3rem, 6vw, 6.5rem);
+  line-height: 0.98;
+  font-weight: 500;
+  letter-spacing: -0.06em;
+}
+
+.laonaz-guide-lead {
+  max-width: 760px;
+  margin: 30px 0 0;
+  color: #3f3f3f;
+  font-size: 1.12rem;
+  line-height: 1.8;
+}
+
+.laonaz-guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.laonaz-guide-actions.center {
+  justify-content: center;
+}
+
+.laonaz-guide-btn {
+  min-height: 56px;
+  padding: 0 34px;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 0.94rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.laonaz-guide-btn.primary {
+  background: #d7b900;
+  color: #111111;
+  box-shadow: 0 14px 24px rgba(154, 130, 0, 0.24);
+}
+
+.laonaz-guide-btn.secondary {
+  background: transparent;
+  color: #566138;
+  border: 1px solid rgba(86, 97, 56, 0.42);
+}
+
+.laonaz-guide-btn:hover {
+  transform: translateY(-2px);
+}
+
+.laonaz-guide-btn.primary:hover {
+  color: #111111;
+  background: #e2c506;
+}
+
+.laonaz-guide-btn.secondary:hover {
+  color: #566138;
+  background: rgba(86, 97, 56, 0.08);
+}
+
+.laonaz-guide-hero-card {
+  padding: 42px;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at top right, rgba(215, 185, 0, 0.18), transparent 34%),
+    #ffffff;
+  border: 1px solid rgba(86, 97, 56, 0.18);
+  box-shadow: 0 24px 60px rgba(86, 97, 56, 0.11);
+}
+
+.laonaz-guide-hero-card span {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 24px;
+  border-radius: 50%;
+  background: #566138;
+  color: #f4f4ec;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.1rem;
+}
+
+.laonaz-guide-hero-card h2 {
+  margin: 0;
+  color: #566138;
+  font-size: 2.2rem;
+  line-height: 1.12;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.laonaz-guide-hero-card p {
+  margin: 20px 0 0;
+  color: #555555;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.laonaz-guide-section {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 72px 76px;
+}
+
+.laonaz-guide-section-heading {
+  max-width: 780px;
+  margin-bottom: 36px;
+}
+
+.laonaz-guide-section-heading h2,
+.laonaz-guide-motive h2,
+.laonaz-guide-data h2,
+.laonaz-guide-cta h2 {
+  margin: 0;
+  color: #111111;
+  font-size: clamp(2.4rem, 4.2vw, 4.7rem);
+  line-height: 1.04;
+  font-weight: 500;
+  letter-spacing: -0.055em;
+}
+
+.laonaz-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+}
+
+.laonaz-guide-info-card {
+  min-height: 310px;
+  padding: 30px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid rgba(86, 97, 56, 0.14);
+  box-shadow: 0 16px 40px rgba(86, 97, 56, 0.08);
+}
+
+.laonaz-guide-info-card span {
+  display: inline-flex;
+  margin-bottom: 24px;
+  font-size: 2.2rem;
+}
+
+.laonaz-guide-info-card h3 {
+  margin: 0;
+  color: #566138;
+  font-size: 1.4rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.laonaz-guide-info-card p {
+  margin: 16px 0 0;
+  color: #555555;
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+.laonaz-guide-motive {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 64px 58px;
+  border-radius: 32px;
+  background: #566138;
+  color: #f4f4ec;
+  display: grid;
+  grid-template-columns: 0.45fr 1fr;
+  gap: 48px;
+}
+
+.laonaz-guide-motive .laonaz-guide-kicker {
+  color: #e2c506;
+}
+
+.laonaz-guide-motive h2 {
+  color: #f4f4ec;
+}
+
+.laonaz-guide-motive p {
+  margin: 0;
+  color: rgba(244, 244, 236, 0.88);
+  font-size: 1.08rem;
+  line-height: 1.9;
+}
+
+.laonaz-guide-values {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid rgba(86, 97, 56, 0.16);
+  border-radius: 26px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.laonaz-guide-values div {
+  padding: 30px;
+  border-right: 1px solid rgba(86, 97, 56, 0.14);
+}
+
+.laonaz-guide-values div:last-child {
+  border-right: none;
+}
+
+.laonaz-guide-values h3 {
+  margin: 0;
+  color: #566138;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.laonaz-guide-values p {
+  margin: 12px 0 0;
+  color: #555555;
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.laonaz-guide-data {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 72px 76px;
+  display: grid;
+  grid-template-columns: 1fr 0.65fr;
+  gap: 36px;
+}
+
+.laonaz-guide-data-content,
+.laonaz-guide-data-list {
+  padding: 42px;
+  border-radius: 28px;
+  background: #ffffff;
+  border: 1px solid rgba(86, 97, 56, 0.14);
+}
+
+.laonaz-guide-data-content p {
+  margin: 24px 0 0;
+  color: #555555;
+  font-size: 1.04rem;
+  line-height: 1.8;
+}
+
+.laonaz-guide-data-list {
+  align-self: start;
+  background: #fbfaf2;
+}
+
+.laonaz-guide-data-list h3 {
+  margin: 0 0 18px;
+  color: #566138;
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.laonaz-guide-data-list ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.laonaz-guide-data-list li {
+  color: #4d4d4d;
+  font-size: 1rem;
+  line-height: 1.75;
+  margin-bottom: 10px;
+}
+
+.laonaz-guide-cta {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 70px 76px 96px;
+  text-align: center;
+}
+
+.laonaz-guide-cta p {
+  max-width: 720px;
+  margin: 24px auto 0;
+  color: #555555;
+  font-size: 1.08rem;
+  line-height: 1.75;
+}
+
+@media (max-width: 1180px) {
+  .laonaz-guide-grid,
+  .laonaz-guide-values {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .laonaz-guide-hero,
+  .laonaz-guide-data,
+  .laonaz-guide-motive {
+    grid-template-columns: 1fr;
+  }
+
+  .laonaz-guide-values div:nth-child(2) {
+    border-right: none;
+  }
+
+  .laonaz-guide-values div {
+    border-bottom: 1px solid rgba(86, 97, 56, 0.14);
+  }
+
+  .laonaz-guide-values div:nth-child(3),
+  .laonaz-guide-values div:nth-child(4) {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .laonaz-guide-hero,
+  .laonaz-guide-section,
+  .laonaz-guide-data,
+  .laonaz-guide-cta {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .laonaz-guide-hero {
+    padding-top: 56px;
+  }
+
+  .laonaz-guide-grid,
+  .laonaz-guide-values {
+    grid-template-columns: 1fr;
+  }
+
+  .laonaz-guide-values div {
+    border-right: none;
+    border-bottom: 1px solid rgba(86, 97, 56, 0.14);
+  }
+
+  .laonaz-guide-values div:last-child {
+    border-bottom: none;
+  }
+
+ .laonaz-guide-motive {
+  margin-left: 24px;
+  margin-right: 24px;
+  padding: 40px 26px;
+  max-width: none;
+}
+
+  .laonaz-guide-data-content,
+  .laonaz-guide-data-list,
+  .laonaz-guide-hero-card {
+    padding: 30px 24px;
+  }
+
+  .laonaz-guide-actions {
+    flex-direction: column;
+  }
+
+  .laonaz-guide-btn {
+    width: 100%;
+  }
+}

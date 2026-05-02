@@ -139,11 +139,11 @@ export default function Footer() {
               </div>
 
               <nav className="footer-links">
-                <Link to="/terms-of-service"  className="footer-link">Terms</Link>
-                <Link to="/privacy-policy"    className="footer-link">Privacy</Link>
+                <Link to="/terms"  className="footer-link">Terms</Link>
+                <Link to="/privacy"    className="footer-link">Privacy</Link>
                 <Link to="/security"          className="footer-link">Security</Link>
                 <Link to="/about"             className="footer-link">About</Link>
-                <Link to="/cookies-settings"  className="footer-link">Manage cookies</Link>
+                <Link to="/cookies"  className="footer-link">Manage cookies</Link>
               </nav>
             </div>
           </div>
