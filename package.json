@@ -1,5 +1,5 @@
 {
-  "name": "lws_laonaz",
+  "name": "laonazblog",
   "version": "0.1.0",
   "private": true,
   "description": "A React client application for the project.",
@@ -32,7 +32,7 @@
     "dayjs": "^1.11.13",
     "dompurify": "^3.2.6",
     "express": "^5.1.0",
-    "firebase": "^11.9.1",
+    "firebase": "^12.12.1",
     "firebase-admin": "^13.4.0",
     "framer-motion": "^12.10.5",
     "mdb-react-ui-kit": "^9.0.0",

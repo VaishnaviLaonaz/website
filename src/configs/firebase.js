@@ -5,12 +5,14 @@ import {
   setPersistence,
   browserLocalPersistence,
   sendPasswordResetEmail,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
 } from 'firebase/auth';
+
 import { initializeFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getDatabase } from 'firebase/database'
-import { GoogleAuthProvider } from 'firebase/auth';
+
 
 const firebaseConfig = {
   apiKey:             process.env.REACT_APP_FIREBASE_API_KEY,
@@ -28,7 +30,11 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth    = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
-export const db      = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+export const db      = initializeFirestore(app, { 
+  experimentalAutoDetectLongPolling: true,
+  useFetchStreams: false,
+  ignoreUndefinedProperties: true, 
+});
 
 export const rtdb = getDatabase(app)
 
