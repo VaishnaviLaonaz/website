@@ -4,7 +4,7 @@ import "../../styles/legal-pages.css";
 
 export default function PrivacyPage() {
   return (
-    <main className="legal-page">
+    <main className="legal-page bounded ">
       <section className="legal-hero">
         <p className="legal-kicker">LAONAZ PRIVACY</p>
         <h1>Privacy Policy</h1>

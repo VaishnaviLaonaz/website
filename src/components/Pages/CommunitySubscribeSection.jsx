@@ -7,7 +7,7 @@ export default function CommunitySubscribeSection({
   instagramUrl = "https://www.instagram.com/",
 }) {
   return (
-    <section className="community-subscribe-section">
+    <section className="community-subscribe-section bounded">
       <div className="community-subscribe-card">
         <div className="community-subscribe-content">
           <span className="community-subscribe-eyebrow">

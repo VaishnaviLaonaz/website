@@ -4,7 +4,7 @@ import "../../styles/legal-pages.css";
 
 export default function TermsPage() {
   return (
-    <main className="legal-page">
+    <main className="legal-page bounded ">
       <section className="legal-hero">
         <p className="legal-kicker">LAONAZ TERMS</p>
         <h1>Terms of Use</h1>

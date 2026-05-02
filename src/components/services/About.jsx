@@ -9,7 +9,7 @@ import {
   MDBIcon,
   MDBBtn
 } from "mdb-react-ui-kit";
-
+import "../../styles/legal-pages.css";
 /* ------------------------------------------------------------------
    1️⃣  Replace this whole object with a Firestore document snapshot
    ------------------------------------------------------------------ */

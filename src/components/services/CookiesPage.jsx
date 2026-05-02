@@ -4,7 +4,7 @@ import "../../styles/legal-pages.css";
 
 export default function CookiesPage() {
   return (
-    <main className="legal-page">
+    <main className="legal-page bounded">
       <section className="legal-hero">
         <p className="legal-kicker">LAONAZ COOKIES</p>
         <h1>Cookie Policy</h1>
