@@ -1,0 +1,21 @@
+/* Full-height column layout from the root */
+html, body {
+  height: 100%;
+}
+
+#root {
+  min-height: 100vh;       /* or 100dvh for mobile viewport units if you prefer */
+  display: flex;
+  flex-direction: column;
+}
+
+/* If you use a <main> element for route content, this makes it fill the space */
+main {
+  flex: 1 0 auto;
+}
+
+/* Your footer already has .site-footer — make sure it sits at the bottom */
+.site-footer {
+  /* margin-top: auto;        push footer to the bottom when content is short */
+  width: 100%;
+}

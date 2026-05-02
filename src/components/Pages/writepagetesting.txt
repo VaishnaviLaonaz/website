@@ -1,0 +1,1042 @@
+
+
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useUserDoc } from '../../configs/user';
+import { createArticle, updateArticle } from '../../configs/useArticles';
+import {
+  createDraft,
+  updateDraft,
+  deleteDraft,
+  getDraftOnce,
+} from '../../configs/useArticles';
+import { ref as rtdbRef, get as rtdbGet, remove as rtdbRemove } from 'firebase/database';
+import { rtdb, db as fsDb, storage } from '../../configs/firebase';
+import {
+  doc, setDoc, collection, onSnapshot,
+  serverTimestamp, increment,
+} from 'firebase/firestore';
+import { uploadBytes, getDownloadURL, ref as sRef } from 'firebase/storage';
+import DOMPurify from 'dompurify';
+
+import '../../styles/writearticlepage.css';
+import 'mdb-react-ui-kit/dist/css/mdb.min.css';
+import '@fortawesome/fontawesome-free/css/all.min.css';
+
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import TextStyle from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
+import LinkExt from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
+import Youtube from '@tiptap/extension-youtube';
+import TextAlign from '@tiptap/extension-text-align';
+
+import Picker from '@emoji-mart/react';
+import emojiData from '@emoji-mart/data';
+
+import { MDBContainer, MDBRow, MDBCol, MDBBtn, MDBIcon, MDBSpinner } from 'mdb-react-ui-kit';
+
+/* ---------- tiny button primitive for the toolbar ---------- */
+function ToolbarButton({ title, icon, onClick, active, disabled }) {
+  return (
+    <button
+      type="button"
+      className={`tb-btn${active ? ' is-active' : ''}`}
+      title={title}
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={!!active}
+      aria-label={title}
+    >
+      <i className={`fas fa-${icon}`} />
+    </button>
+  );
+}
+
+/* ---------- Image extension with persistent cover marker ---------- */
+const ResizableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+
+      class: {
+        default: 'article-img',
+        parseHTML: el => el.getAttribute('class'),
+        renderHTML: () => ({ class: 'article-img' }),
+      },
+
+      'data-size': {
+        default: null, // sm | md | lg
+        parseHTML: el => el.getAttribute('data-size'),
+        renderHTML: attrs => (attrs['data-size'] ? { 'data-size': attrs['data-size'] } : {}),
+      },
+
+      // optional unique id (future-safe)
+      'data-id': {
+        default: null,
+        parseHTML: el => el.getAttribute('data-id'),
+        renderHTML: attrs => (attrs['data-id'] ? { 'data-id': attrs['data-id'] } : {}),
+      },
+
+      // ✅ persistent "cover" marker
+      'data-cover': {
+        default: null, // "1"
+        parseHTML: el => el.getAttribute('data-cover'),
+        renderHTML: attrs => (attrs['data-cover'] ? { 'data-cover': attrs['data-cover'] } : {}),
+      },
+    };
+  },
+});
+
+export default function WriteArticle() {
+  const { currentUser } = useAuth();
+  const { userDoc } = useUserDoc();
+
+  const nav = useNavigate();
+  const { id } = useParams();
+  const location = useLocation();
+  const isDraftMode = new URLSearchParams(location.search).get('draft') === '1';
+  const isEdit = Boolean(id);
+
+  const [suggestedTags, setSuggestedTags] = useState([]);
+  const [publishing, setPublishing] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const [title, setTitle] = useState('');
+  const [tags, setTags] = useState([]);
+
+  // ✅ cover image chosen by clicking an image in body
+  const [coverURL, setCoverURL] = useState(null);
+
+  // placeholder behavior
+  const [isEmpty, setIsEmpty] = useState(true);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // hidden inputs
+  const imgInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // “+ More” panel (portaled)
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreBtnRef = useRef(null);
+  const morePanelRef = useRef(null);
+  const [morePos, setMorePos] = useState({ top: 0, left: 0 });
+
+  // cover hint location (absolute inside editor-shell)
+  const [coverHint, setCoverHint] = useState({ visible: false, top: 0, left: 0, width: 0 });
+
+  // Emoji picker (portaled)
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const emojiBtnRef = useRef(null);
+  const emojiPanelRef = useRef(null);
+  const [emojiPos, setEmojiPos] = useState({ top: 0, left: 0 });
+
+  const lastSelectionRef = useRef(null);
+
+  // ✅ Track currently selected image src (for bubble / selection only)
+  const [selectedImageSrc, setSelectedImageSrc] = useState(null);
+
+  /* ---------- tags (firestore) ---------- */
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsub = onSnapshot(collection(fsDb, 'tags'), snap => {
+      const map = new Map();
+
+      snap.docs.forEach(d => {
+        const raw = d.id || '';
+        const key = raw.trim().toLowerCase();
+        if (!key) return;
+
+        const count = d.data().count || 0;
+
+        if (!map.has(key)) map.set(key, { name: key, label: raw, count });
+        else {
+          const prev = map.get(key);
+          map.set(key, { ...prev, count: Math.max(prev.count, count) });
+        }
+      });
+
+      const list = Array.from(map.values()).sort((a, b) => b.count - a.count);
+      setSuggestedTags(list);
+    });
+
+    return () => unsub();
+  }, [currentUser]);
+
+  /* ---------- editor ---------- */
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      Underline,
+      TextStyle,
+      Color,
+      Highlight,
+      LinkExt.configure({ openOnClick: false, HTMLAttributes: { rel: 'noopener nofollow' } }),
+      ResizableImage.configure({ allowBase64: true }),
+      Youtube.configure({ inline: false, width: 640 }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    ],
+    content: '<p></p>',
+    onCreate({ editor }) {
+      const hasText = editor.state.doc.textContent.trim().length > 0;
+      const hasImage = !!editor.state.doc.content?.content?.some(n => n.type?.name === 'image'); // quick check
+      setIsEmpty(!hasText && !hasImage);
+    },
+    onUpdate({ editor }) {
+      const hasText = editor.state.doc.textContent.trim().length > 0;
+
+      // ✅ robust: detect any image anywhere
+      let hasAnyImage = false;
+      editor.state.doc.descendants((node) => {
+        if (node.type.name === 'image') {
+          hasAnyImage = true;
+          return false;
+        }
+        return true;
+      });
+
+      setIsEmpty(!hasText && !hasAnyImage);
+    },
+  });
+
+  /* ---------- focus/blur (placeholder) ---------- */
+  useEffect(() => {
+    if (!editor) return;
+    const onFocus = () => setIsFocused(true);
+    const onBlur = () => setIsFocused(false);
+    editor.on('focus', onFocus);
+    editor.on('blur', onBlur);
+    return () => {
+      editor.off('focus', onFocus);
+      editor.off('blur', onBlur);
+    };
+  }, [editor]);
+
+  /* ---------- tag helpers ---------- */
+  const addTag = name => {
+    const tag = String(name || '').trim().toLowerCase();
+    if (tag && !tags.includes(tag)) setTags(prev => [...prev, tag]);
+  };
+  const removeTag = name => setTags(prev => prev.filter(t => t !== name));
+
+  /* ---------- ✅ set cover by src (persist into node attrs) ---------- */
+  const setCoverBySrc = useCallback((src) => {
+    if (!editor || !src) return;
+
+    setCoverURL(src);
+
+    editor.commands.command(({ tr, state }) => {
+      let changed = false;
+
+      state.doc.descendants((node, pos) => {
+        if (node.type.name !== 'image') return;
+
+        const isThis = node.attrs.src === src;
+        const nextCover = isThis ? '1' : null;
+
+        if (node.attrs['data-cover'] !== nextCover) {
+          tr.setNodeMarkup(pos, undefined, { ...node.attrs, 'data-cover': nextCover });
+          changed = true;
+        }
+      });
+
+      return changed;
+    });
+  }, [editor]);
+
+  /* ---------- track selected image (but DON'T auto set cover) ---------- */
+  useEffect(() => {
+    if (!editor) return;
+
+    const updateSelectedImage = () => {
+      if (!editor.isActive('image')) {
+        setSelectedImageSrc(null);
+        return;
+      }
+      const sel = editor.state.selection;
+      const node = sel?.node;
+      const src = node?.type?.name === 'image' ? node.attrs?.src : null;
+      setSelectedImageSrc(src || null);
+    };
+
+    editor.on('selectionUpdate', updateSelectedImage);
+    return () => editor.off('selectionUpdate', updateSelectedImage);
+  }, [editor]);
+
+  /* ---------- click image in editor = set cover ---------- */
+  useEffect(() => {
+    if (!editor) return;
+
+    const root = editor.view.dom;
+
+    const onClick = (e) => {
+      const img = e.target?.closest?.('img.article-img');
+      if (!img) return;
+
+      const src = img.getAttribute('src');
+      if (!src) return;
+
+      setCoverBySrc(src);
+    };
+
+    root.addEventListener('click', onClick);
+    return () => root.removeEventListener('click', onClick);
+  }, [editor, setCoverBySrc]);
+
+  /* ---------- keep cover hint positioned under cover image even while typing ---------- */
+  useEffect(() => {
+    if (!coverURL) {
+      setCoverHint(h => ({ ...h, visible: false }));
+      return;
+    }
+
+    const update = () => {
+      const imgEl = document.querySelector(`.ProseMirror img.article-img[data-cover="1"]`);
+      if (!imgEl) return;
+
+      const imgRect = imgEl.getBoundingClientRect();
+      const shell = document.querySelector('.editor-shell');
+      const shellRect = shell?.getBoundingClientRect();
+      if (!shellRect) return;
+
+      setCoverHint({
+        visible: true,
+        top: imgRect.bottom - shellRect.top + 10,
+        left: imgRect.left - shellRect.left,
+        width: imgRect.width,
+      });
+    };
+
+    // run now and also when layout changes
+    const raf = requestAnimationFrame(update);
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [coverURL]);
+
+  /* ---------- load article/draft ---------- */
+  useEffect(() => {
+    if (!isEdit || !editor) return;
+
+    const setFrom = (obj) => {
+      setTitle(obj.title || '');
+      setTags(obj.tags || []);
+      setCoverURL(obj.coverUrl || null);
+      editor.commands.setContent(obj.body || '<p></p>');
+
+      // after content loads, re-apply cover marker (if coverUrl exists)
+      if (obj.coverUrl) {
+        requestAnimationFrame(() => setCoverBySrc(obj.coverUrl));
+      }
+    };
+
+    if (isDraftMode) {
+      getDraftOnce(currentUser.uid, id).then(draft => {
+        if (!draft) { nav('/profile'); return; }
+        setFrom(draft);
+      });
+    } else {
+      rtdbGet(rtdbRef(rtdb, `articles/${id}`)).then(snap => {
+        if (!snap.exists()) { nav('/'); return; }
+        setFrom(snap.val());
+      });
+    }
+  }, [id, isEdit, isDraftMode, nav, editor, currentUser, setCoverBySrc]);
+
+  /* ---------- click-away + position for portaled panels ---------- */
+  useEffect(() => {
+    const onDocClick = (e) => {
+      const inMoreBtn = moreBtnRef.current?.contains(e.target);
+      const inMorePanel = morePanelRef.current?.contains(e.target);
+      if (!inMoreBtn && !inMorePanel) setMoreOpen(false);
+
+      const inEmojiBtn = emojiBtnRef.current?.contains(e.target);
+      const inEmojiPanel = emojiPanelRef.current?.contains(e.target);
+      if (!inEmojiBtn && !inEmojiPanel) setPickerVisible(false);
+    };
+    const onEsc = (e) => {
+      if (e.key === 'Escape') { setMoreOpen(false); setPickerVisible(false); }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, []);
+
+  useEffect(() => {
+    const updatePositions = () => {
+      if (moreOpen && moreBtnRef.current) {
+        const r = moreBtnRef.current.getBoundingClientRect();
+        setMorePos({ top: r.bottom + 8 + window.scrollY, left: r.left + window.scrollX });
+      }
+      if (pickerVisible && emojiBtnRef.current) {
+        const r = emojiBtnRef.current.getBoundingClientRect();
+        setEmojiPos({ top: r.bottom + 8 + window.scrollY, left: r.left + window.scrollX - 8 });
+      }
+    };
+    updatePositions();
+    window.addEventListener('scroll', updatePositions, true);
+    window.addEventListener('resize', updatePositions);
+    return () => {
+      window.removeEventListener('scroll', updatePositions, true);
+      window.removeEventListener('resize', updatePositions);
+    };
+  }, [moreOpen, pickerVisible]);
+
+  /* ---------- inline media ---------- */
+  const handleImgUpload = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      // ✅ insert NEW image (never replaces)
+      const id = `img_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      editor?.chain().focus().setImage({ src: reader.result, 'data-id': id }).run();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleReplaceSelectedImage = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!editor?.isActive('image')) {
+      alert('Select an image first to replace it.');
+      e.target.value = '';
+      return;
+    }
+
+    const sel = editor.state.selection;
+    const node = sel?.node;
+    const oldSrc = node?.type?.name === 'image' ? node.attrs?.src : null;
+    const wasCover = node?.attrs?.['data-cover'] === '1';
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      editor.chain().focus().updateAttributes('image', { src: reader.result }).run();
+
+      // ✅ if the replaced image was cover, keep it cover (update marker + state)
+      if (wasCover && oldSrc) {
+        setCoverBySrc(reader.result);
+      }
+    };
+
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  /* ---------- toolbar helpers ---------- */
+  const rememberSelection = () => {
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    lastSelectionRef.current = { from, to };
+  };
+
+  const setBlockType = (e) => {
+    const v = e.target.value;
+    const sel = lastSelectionRef.current;
+
+    let chain = editor?.chain().focus();
+    if (!chain) return;
+
+    if (sel) chain = chain.setTextSelection(sel);
+
+    switch (v) {
+      case 'p': chain.setParagraph().run(); break;
+      case 'h1': chain.toggleHeading({ level: 1 }).run(); break;
+      case 'h2': chain.toggleHeading({ level: 2 }).run(); break;
+      case 'h3': chain.toggleHeading({ level: 3 }).run(); break;
+      case 'blockquote': chain.toggleBlockquote().run(); break;
+      case 'codeblock': chain.toggleCodeBlock().run(); break;
+      default: break;
+    }
+
+    lastSelectionRef.current = null;
+  };
+
+  const addLink = () => {
+    const url = window.prompt('Enter URL (https://…)');
+    if (!url) return;
+    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  };
+  const removeLink = () => editor?.chain().focus().unsetLink().run();
+  const insertHR = () => editor?.chain().focus().setHorizontalRule().run();
+  const insertYouTube = () => {
+    const url = window.prompt('Paste a YouTube URL');
+    if (!url) return;
+    editor?.chain().focus().setYoutubeVideo({ src: url, width: 640, height: 360 }).run();
+  };
+
+  const handleFileAttach = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+    try {
+      const path = `files/${currentUser.uid}/${Date.now()}_${file.name}`;
+      const ref = sRef(storage, path);
+      await uploadBytes(ref, file);
+      const url = await getDownloadURL(ref);
+      editor?.chain().focus()
+        .insertContent(`<a href="${url}" rel="noopener nofollow" target="_blank">${file.name}</a>`)
+        .run();
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const clearFormatting = () => editor?.chain().focus().clearNodes().unsetAllMarks().run();
+
+  /* ---------- emoji select ---------- */
+  const handleEmojiSelect = (emoji) => {
+    const char = emoji?.native || '';
+    if (!char) return;
+    editor?.chain().focus().insertContent(char).run();
+    setPickerVisible(false);
+  };
+
+  /* ---------- submit & draft ---------- */
+  const handleSubmit = async () => {
+    if (publishing) return;
+    if (!editor) return;
+
+    const body = editor.getHTML();
+    const bodyText = body.replace(/<[^>]*>?/gm, '').trim();
+
+    if (!title.trim() || !bodyText) {
+      alert('Title and body are required');
+      return;
+    }
+
+    setPublishing(true);
+
+    try {
+      const ts = Date.now();
+      const payload = {
+        title,
+        body,
+        tags,
+        coverUrl: coverURL || '',
+        authorId: currentUser.uid,
+        createdAt: ts,
+        updatedAt: ts,
+      };
+
+      let artId;
+      if (isEdit && !isDraftMode) {
+        await updateArticle(id, payload);
+        artId = id;
+      } else {
+        const res = await createArticle(payload);
+        artId = res.id;
+        if (isDraftMode) await deleteDraft(currentUser.uid, id);
+      }
+
+      await Promise.all(
+        tags.map(async t => {
+          const refDoc = doc(fsDb, 'tags', t);
+          await setDoc(refDoc, { count: increment(1), updatedAt: serverTimestamp() }, { merge: true });
+        })
+      );
+
+      nav(`/article/${artId}`);
+    } catch (e) {
+      console.error(e);
+      alert('Something went wrong, please try again.');
+      setPublishing(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!currentUser) { alert('Please sign in first.'); return; }
+    if (!editor) return;
+
+    try {
+      const body = editor.getHTML();
+      const ts = Date.now();
+      const draftPayload = {
+        userId: currentUser.uid,
+        title: title || '(untitled)',
+        body,
+        tags,
+        coverUrl: coverURL || '',
+        status: 'draft',
+        createdAt: ts,
+        updatedAt: ts,
+      };
+
+      if (isEdit && isDraftMode) await updateDraft(currentUser.uid, id, draftPayload);
+      else await createDraft(currentUser.uid, draftPayload);
+
+      alert('Draft saved.');
+    } catch (e) {
+      console.error('Draft save error:', e);
+      alert('Could not save draft. Please try again.');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!isEdit) return;
+    const ok = window.confirm('Delete this article permanently?');
+    if (!ok) return;
+
+    try {
+      if (isDraftMode) {
+        await deleteDraft(currentUser.uid, id);
+        alert('Draft deleted.');
+        nav('/profile');
+      } else {
+        await rtdbRemove(rtdbRef(rtdb, `articles/${id}`));
+        alert('Article deleted.');
+        nav('/');
+      }
+    } catch {
+      alert('Failed to delete. Try again.');
+    }
+  };
+
+  const dateString = useMemo(() => {
+    const now = new Date();
+    const opts = { year: 'numeric', month: 'long', day: 'numeric' };
+    return now.toLocaleDateString(undefined, opts);
+  }, []);
+
+  const setImageSize = (sizeKey) => {
+    if (!editor?.isActive('image')) return;
+    const key = sizeKey === 'sm' || sizeKey === 'lg' ? sizeKey : 'md';
+    editor.chain().focus().updateAttributes('image', { 'data-size': key }).run();
+  };
+
+  // current user identity (for right-side profile block)
+  const userName =
+    userDoc?.fullName ||
+    userDoc?.name ||
+    currentUser?.displayName ||
+    'User';
+
+  const userRole =
+    userDoc?.role ||
+    userDoc?.jobTitle ||
+    userDoc?.designation ||
+    null;
+
+  const userPhoto =
+    userDoc?.avatarUrl ||
+    currentUser?.photoURL ||
+    null;
+
+  return (
+    <div style={{ backgroundColor: '#F1F1E6' }}>
+      <MDBContainer className="write-wrap py-4">
+        <div className="write-topbar bounded mb-4">
+          <Link to="/" className="topbar-link">
+            <MDBIcon fas icon="arrow-left" className="me-2" /> back to home
+          </Link>
+          {isEdit && (
+            <button type="button" className="topbar-delete-btn" onClick={handleDelete}>
+              <MDBIcon fas icon="trash-alt" className="me-2" /> {isDraftMode ? 'delete draft' : 'delete article'}
+            </button>
+          )}
+        </div>
+
+        <div className="bounded">
+          <MDBRow className="justify-content-center">
+            <MDBCol md="10" lg="9">
+              {/* ===================== META ===================== */}
+              <div className="write-meta grid mt-2 write-meta--figma">
+                <div className="title-col">
+                  <div className="write-date">{dateString}</div>
+                  <input
+                    className="title-input"
+                    placeholder="TITLE"
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                  />
+
+                  <div className="tag-suggest tag-suggest--grid mt-3">
+                    {suggestedTags.map(({ name, label }) => {
+                      const active = tags.includes(name);
+                      return (
+                        <button
+                          type="button"
+                          key={name}
+                          className={`chip ${active ? 'chip-filled' : 'chip-outline'}`}
+                          onClick={() => (active ? removeTag(name) : addTag(name))}
+                          title={`${active ? 'Remove' : 'Add'} #${name}`}
+                          aria-pressed={active}
+                        >
+                          #{label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="meta-divider" aria-hidden />
+
+                <div className="cover-col">
+                  <div className="cover-circle" title="Your profile">
+                    {userPhoto ? (
+                      <img src={userPhoto} alt="Profile" />
+                    ) : (
+                      <div className="cover-empty">
+                        <i className="far fa-user" />
+                        <span>Profile</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="profile-meta">
+                    <div style={{ fontWeight: 600, fontSize: 16 }}>{userName}</div>
+                    <div style={{ opacity: 0.75, fontSize: 14, fontWeight: 400 }}>{userRole}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ===== Editor ===== */}
+              <div className="editor-shell mt-5">
+                <div
+                  className="editor-canvas transparent"
+                  onClick={() => editor?.chain().focus().run()}
+                  role="textbox"
+                  aria-label="Article body editor"
+                >
+                  {/* ✅ Placeholder hides when focused OR not empty */}
+                  {!isFocused && isEmpty && (
+                    <div className="editor-placeholder" aria-hidden="true">
+                      Write your article here…
+                    </div>
+                  )}
+
+                  {/* ✅ cover hint anchored to cover image */}
+                  {coverHint.visible && (
+                    <div
+                      className="cover-hint-float"
+                      style={{
+                        position: 'absolute',
+                        top: coverHint.top,
+                        left: coverHint.left,
+                        width: coverHint.width,
+                        textAlign: 'center',
+                        zIndex: 5,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      Set as the cover photo of the article
+                    </div>
+                  )}
+
+                  <EditorContent editor={editor} />
+                </div>
+
+                {/* ===== Toolbar ===== */}
+                <div className="editor-toolbar bottom shadow-soft">
+                  <ToolbarButton title="Bold" icon="bold"
+                    active={editor?.isActive('bold')}
+                    onClick={() => editor?.chain().focus().toggleBold().run()} />
+                  <ToolbarButton title="Italic" icon="italic"
+                    active={editor?.isActive('italic')}
+                    onClick={() => editor?.chain().focus().toggleItalic().run()} />
+                  <ToolbarButton title="Underline" icon="underline"
+                    active={editor?.isActive('underline')}
+                    onClick={() => editor?.chain().focus().toggleUnderline().run()} />
+                  <ToolbarButton title="Strikethrough" icon="strikethrough"
+                    active={editor?.isActive('strike')}
+                    onClick={() => editor?.chain().focus().toggleStrike().run()} />
+
+                  <label className="tb-color" title="Text color">
+                    <input type="color"
+                      onChange={e => editor?.chain().focus().setColor(e.target.value).run()} />
+                  </label>
+                  <ToolbarButton title="Highlight" icon="highlighter"
+                    active={editor?.isActive('highlight')}
+                    onClick={() => editor?.chain().focus().toggleHighlight().run()} />
+
+                  <button
+                    type="button"
+                    ref={emojiBtnRef}
+                    className="tb-btn"
+                    title="Emoji"
+                    onClick={() => setPickerVisible(v => !v)}
+                    aria-expanded={pickerVisible}
+                    aria-haspopup="dialog"
+                  >
+                    <i className="fas fa-smile" />
+                  </button>
+
+                  <span className="tb-sep" />
+
+                  <select
+                    className="tb-select"
+                    aria-label="Block type"
+                    value={
+                      editor?.isActive('heading', { level: 1 }) ? 'h1' :
+                        editor?.isActive('heading', { level: 2 }) ? 'h2' :
+                          editor?.isActive('heading', { level: 3 }) ? 'h3' :
+                            editor?.isActive('blockquote') ? 'blockquote' :
+                              editor?.isActive('codeBlock') ? 'codeblock' : 'p'
+                    }
+                    onMouseDown={rememberSelection}
+                    onChange={setBlockType}
+                  >
+                    <option value="p">¶ Paragraph</option>
+                    <option value="h1">H1</option>
+                    <option value="h2">H2</option>
+                    <option value="h3">H3</option>
+                    <option value="blockquote">Quote</option>
+                    <option value="codeblock">Code Block</option>
+                  </select>
+
+                  <span className="tb-sep" />
+
+                  <ToolbarButton title="Numbered list" icon="list-ol"
+                    active={editor?.isActive('orderedList')}
+                    onClick={() => editor?.chain().focus().toggleOrderedList().run()} />
+                  <ToolbarButton title="Bulleted list" icon="list-ul"
+                    active={editor?.isActive('bulletList')}
+                    onClick={() => editor?.chain().focus().toggleBulletList().run()} />
+
+                  <span className="tb-sep" />
+
+                  <ToolbarButton title="Align left" icon="align-left"
+                    onClick={() => editor?.chain().focus().setTextAlign('left').run()} />
+                  <ToolbarButton title="Align center" icon="align-center"
+                    onClick={() => editor?.chain().focus().setTextAlign('center').run()} />
+                  <ToolbarButton title="Align right" icon="align-right"
+                    onClick={() => editor?.chain().focus().setTextAlign('right').run()} />
+                  <ToolbarButton title="Justify" icon="align-justify"
+                    onClick={() => editor?.chain().focus().setTextAlign('justify').run()} />
+
+                  <span className="tb-sep" />
+
+                  <button
+                    type="button"
+                    ref={moreBtnRef}
+                    className="tb-btn tb-plus"
+                    title="More"
+                    onClick={() => setMoreOpen(o => !o)}
+                    aria-expanded={moreOpen}
+                    aria-haspopup="menu"
+                  >
+                    <i className="fas fa-plus" />
+                  </button>
+                </div>
+
+                {/* Hidden inputs for uploads */}
+                <input ref={imgInputRef} type="file" hidden accept="image/*" onChange={handleImgUpload} />
+                <input ref={fileInputRef} type="file" hidden onChange={handleFileAttach} />
+
+                {/* Emoji picker (PORTAL) */}
+                {pickerVisible && createPortal(
+                  <div
+                    ref={emojiPanelRef}
+                    className="emoji-all-pop"
+                    style={{ position: 'absolute', top: emojiPos.top, left: emojiPos.left, zIndex: 9999 }}
+                    role="dialog"
+                    aria-modal="true"
+                  >
+                    <Picker
+                      data={emojiData}
+                      onEmojiSelect={handleEmojiSelect}
+                      theme="light"
+                      navPosition="bottom"
+                      previewPosition="none"
+                      searchPosition="top"
+                      perLine={8}
+                    />
+                  </div>,
+                  document.body
+                )}
+
+                {/* “+ More” panel (PORTAL) */}
+                {moreOpen && createPortal(
+                  <div
+                    ref={morePanelRef}
+                    className="tb-more-panel"
+                    style={{ position: 'absolute', top: morePos.top, left: morePos.left, zIndex: 9999 }}
+                    role="menu"
+                  >
+                    <button className="tb-item" onClick={addLink}>
+                      <i className="fas fa-link" /><span>Insert link</span>
+                    </button>
+                    <button className="tb-item" onClick={removeLink}>
+                      <i className="fas fa-unlink" /><span>Remove link</span>
+                    </button>
+
+                    <button className="tb-item" onClick={() => imgInputRef.current?.click()}>
+                      <i className="fas fa-image" /><span>Insert image</span>
+                    </button>
+                    <button className="tb-item" onClick={() => fileInputRef.current?.click()}>
+                      <i className="fas fa-file" /><span>Attach file</span>
+                    </button>
+
+                    <button className="tb-item" onClick={insertYouTube}>
+                      <i className="fas fa-video" /><span>Insert YouTube</span>
+                    </button>
+                    <button className="tb-item" onClick={insertHR}>
+                      <i className="fas fa-minus" /><span>Horizontal rule</span>
+                    </button>
+
+                    <div className="tb-divider" />
+
+                    <button className="tb-item" onClick={clearFormatting}>
+                      <i className="fas fa-eraser" /><span>Clear formatting</span>
+                    </button>
+                    <button className="tb-item" onClick={() => editor?.chain().focus().undo().run()}>
+                      <i className="fas fa-undo" /><span>Undo</span>
+                    </button>
+                    <button className="tb-item" onClick={() => editor?.chain().focus().redo().run()}>
+                      <i className="fas fa-redo" /><span>Redo</span>
+                    </button>
+                  </div>,
+                  document.body
+                )}
+
+                {/* image bubble tools */}
+                {editor && (
+                  <BubbleMenu
+                    editor={editor}
+                    shouldShow={({ editor }) => editor.isActive('image')}
+                    tippyOptions={{ duration: 0 }}
+                  >
+                    <div className="bubble-tools">
+                      <MDBBtn type="button" size="sm" color="light"
+                        onClick={() => setImageSize('sm')} title="Small image">
+                        S
+                      </MDBBtn>
+                      <MDBBtn type="button" size="sm" color="light"
+                        onClick={() => setImageSize('md')} title="Medium image">
+                        M
+                      </MDBBtn>
+                      <MDBBtn type="button" size="sm" color="light"
+                        onClick={() => setImageSize('lg')} title="Large image">
+                        L
+                      </MDBBtn>
+
+                      <MDBBtn type="button" size="sm" color="light"
+                        onClick={() => document.getElementById('img-edit-upload').click()}
+                        title="Replace image">
+                        <MDBIcon fas icon="pencil-alt" />
+                      </MDBBtn>
+
+                      <MDBBtn
+                        type="button"
+                        size="sm"
+                        color="light"
+                        onClick={() => {
+                          const sel = editor?.state?.selection;
+                          const node = sel?.node;
+                          const src = node?.type?.name === 'image' ? node.attrs?.src : null;
+                          const wasCover = node?.attrs?.['data-cover'] === '1';
+
+                          editor.chain().focus().deleteSelection().run();
+
+                          // ✅ if deleted image was cover -> clear cover + hide hint
+                          if (wasCover && src && src === coverURL) {
+                            setCoverURL(null);
+                            setCoverHint(h => ({ ...h, visible: false }));
+                          }
+                        }}
+                        title="Delete image"
+                      >
+                        <MDBIcon fas icon="trash" />
+                      </MDBBtn>
+                    </div>
+                  </BubbleMenu>
+                )}
+
+                <input
+                  id="img-edit-upload"
+                  hidden
+                  type="file"
+                  accept="image/*"
+                  onChange={handleReplaceSelectedImage}
+                />
+              </div>
+
+              {/* ===== Actions ===== */}
+              <div className="write-actions mt-5" aria-label="article actions">
+                <button type="button" className="btn-preview pill-btn" onClick={() => setPreviewOpen(true)}>
+                  Preview
+                </button>
+                <button type="button" className="btn-publish pill-btn" disabled={publishing} onClick={handleSubmit}>
+                  {publishing ? (<><MDBSpinner size="sm" tag="span" className="me-2" role="status" />Publishing…</>) : 'PUBLISH'}
+                </button>
+                <div className="save-row">
+                  <button type="button" className="save-draft-link" onClick={handleSaveDraft}>Save as Draft</button>
+                </div>
+              </div>
+            </MDBCol>
+          </MDBRow>
+        </div>
+      </MDBContainer>
+
+      <PreviewOverlay
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        onPublish={handleSubmit}
+        title={title}
+        tags={tags}
+        coverUrl={coverURL}
+        bodyHTML={editor?.getHTML?.() || ''}
+      />
+    </div>
+  );
+}
+
+/* ---------- Preview overlay ---------- */
+function PreviewOverlay({ open, onClose, onPublish, title, tags, coverUrl, bodyHTML }) {
+  if (!open) return null;
+
+  return (
+    <div className="preview-overlay" role="dialog" aria-modal="true">
+      <div className="preview-panel">
+        <div className="preview-header">
+          <div className="preview-cover">
+            {coverUrl ? (
+              <img src={coverUrl} alt="Cover" />
+            ) : (
+              <div className="preview-cover--empty">
+                <i className="far fa-image" />
+              </div>
+            )}
+          </div>
+
+          <div className="preview-meta">
+            <h1 className="preview-title">{title || 'Untitled'}</h1>
+
+            {Array.isArray(tags) && tags.length > 0 && (
+              <div className="preview-tags">
+                {tags.map(t => (
+                  <span key={t} className="chip chip-outline">#{t}</span>
+                ))}
+              </div>
+            )}
+
+            <div
+              className="preview-body"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(bodyHTML || '') }}
+            />
+          </div>
+        </div>
+
+        <div className="preview-actions">
+          <button type="button" className="btn-preview pill-btn" onClick={onClose}>Back</button>
+        </div>
+      </div>
+    </div>
+  );
+}

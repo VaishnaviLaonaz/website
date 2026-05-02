@@ -1,0 +1,190 @@
+/* ---------- Article card (header) ---------- */
+.article-card { background: transparent; }
+
+/* Title – matches mock: bold, compact leading, large */
+.article-title{
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--clr-text-heading, #2B2B2B);
+  font-size: clamp(2rem, 3.2vw, 3.25rem);  /* ~52px at desktop */
+  margin-bottom: 1.75rem !important;
+}
+
+/* Tags */
+.article-tags .article-tag{
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 150%;
+  color: #5C6B3C;          /* olive */
+}
+
+/* Meta row */
+.article-meta{
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: #7E7E7E;          /* muted grey used in mock */
+  margin-top: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+}
+.article-meta .meta-ico{ font-size: 20px; color: currentColor;  margin-right: 4px; margin-left: 10px;}
+.meta-ico-large{margin-left: 40px; font-size: 20px;}
+.article-meta button,
+.article-meta span[role="button"] {
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* Like / bookmark coloring like the design */
+.article-like{ color: inherit; }
+.article-bookmark{ color: inherit; }
+.article-bookmark .fa-star{ transition: color .15s; }
+.article-bookmark:hover .fa-star{ color: #FFC107; }
+
+/* Author column + vertical divider */
+.author-col{
+  align-items: flex-start;
+  padding-left: 40px;             /* gap from divider */
+}
+@media (min-width: 768px){
+  .author-col::before{
+    content:'';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #C9CEB6;          /* subtle vertical divider in mock */
+  }
+}
+
+
+/* Author block */
+.author-link{
+  text-decoration: none;
+  color: inherit;
+}
+.author-avatar{
+  width: 128px;
+  height: 128px;
+  object-fit: cover;
+}
+@media (min-width: 1200px){
+  .author-avatar{ width: 160px; height: 160px; }  /* desktop size in mock */
+}
+.author-name{
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  color: #3A3A3A;
+}
+.author-role{
+  color: #8C8C8C;
+  font-family: 'DM Sans', sans-serif;
+}
+.author-name,
+.author-role {
+  margin-left: 40px;   /* pushes just the text */
+}
+
+/* Body copy for the article content under the header */
+.article-body{
+  line-height: 1.8;
+  color: var(--clr-text-primary, #333333);
+  font-size: 1.02rem;
+}
+
+/* Optional: thin divider below meta if you enable it later */
+/*
+.article-meta + .article-divider {
+  height: 1px;
+  background: #E3E6D6;
+  margin: 32px 0;
+}
+*/
+
+
+.article-body.bounded-media {
+  max-width: 720px;          /* keeps paragraphs comfortably readable */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---------- IMAGES IN BODY ---------- */
+.article-body img,
+.article-body .article-img,
+.article-body figure img {
+  display: block;
+  max-width: var(--article-media-max);
+  width: 100%;               /* respect max-width above, then scale within */
+  height: auto;
+  margin: 1rem auto;         /* center */
+  border-radius: 14px;       /* matches your design */
+  object-fit: contain;       /* never crop */
+}
+
+/* Optional subtle frame for images (feel free to keep or remove) */
+.article-body img,
+.article-body figure img {
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+  border: 1px solid #E5E8D8; /* gentle border that matches your palette */
+}
+
+.article-body img.article-img[data-size="sm"] {
+  width: min(33%, 100%);
+}
+
+/* Medium image: comfortable reading width */
+.article-body img.article-img[data-size="md"] {
+  width: min(66%, 100%);
+}
+
+/* Large image: full content width (but never overflow) */
+.article-body img.article-img[data-size="lg"],
+.article-body img.article-img:not([data-size]) {
+  /* default to large if no attribute found */
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ---------- FIGURE / CAPTION ---------- */
+.article-body figure {
+  display: block;
+  text-align: center;
+  margin: 1.25rem auto;
+}
+.article-body figcaption {
+  font-size: 0.85rem;
+  color: #6B6B6B;
+  margin-top: 0.5rem;
+}
+
+/* ---------- VIDEOS / IFRAMES (YouTube, etc.) ---------- */
+.article-body iframe,
+.article-body video,
+.article-body .tiptap-youtube-wrapper,
+.article-body .ProseMirror iframe {
+  display: block;
+  max-width: var(--article-media-max);
+  width: 100%;
+  aspect-ratio: 16 / 9;      /* keeps embeds tidy */
+  height: auto;
+  margin: 1rem auto;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Ensure paragraphs don’t stretch too wide relative to images */
+.article-body p {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}

@@ -1,0 +1,152 @@
+/* ──────────────────────────────────────────────
+   1.  Outer section spacing + subtle page tint
+   ────────────────────────────────────────────── */
+:global(body) {
+  background: #F1F1E6 ;             /* light grey page backdrop */
+}
+
+.wrapper {                            /* <section> */
+  background: #f3f3f4;                /* warm-olive panel */
+  border-radius: 22px;
+  padding: clamp(2.5rem, 4vw, 3rem);
+  margin-block: clamp(2.5rem, 6vh, 4rem);   /* top + bottom air */
+  max-width: 860px;                   /* keeps card narrow on xl screens */
+  margin-inline: auto;                /* centres the panel */
+}
+
+/* ──────────────────────────────────────────────
+   2.  Remove MDB shadow on the nested card
+   ────────────────────────────────────────────── */
+.card {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ──────────────────────────────────────────────
+   3.  Avatar + “Upload Image” link
+   ────────────────────────────────────────────── */
+.avatar {
+  width: 120px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #fff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .07);
+  cursor: pointer;
+  transition: transform .15s ease;
+}
+.avatar:hover { transform: scale(1.04); }
+
+/* overwrite MDB’s blue link */
+:global(.btn-link) {
+  background: none !important;
+  border: 0 !important;
+  padding: 0 !important;
+  color: #53603e !important;
+  font-size: .84rem !important;
+  text-decoration: underline;
+}
+:global(.btn-link:hover) { color: #374124 !important; }
+
+/* ──────────────────────────────────────────────
+   4.  Form labels, fields, and selects
+   ────────────────────────────────────────────── */
+:global(.form-label) {
+  font-size: .83rem;
+  font-weight: 600;
+  color: #3a3f34;
+  margin-bottom: .25rem;
+}
+
+:global(.form-control) {              /* input, select, textarea */
+  height: 42px;
+  font-size: .925rem;
+  border: 1px solid #d9dccd;
+  border-radius: 6px;
+  background: #fff;
+  padding-inline: .75rem;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+:global(.form-control:focus) {
+  border-color: #b1b89a;
+  box-shadow: 0 0 0 2px rgb(177 184 154 / .25);
+}
+
+/* unified arrow for all selects (DOB & gender) */
+:global(select.form-control) {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='11' height='7' viewBox='0 0 11 7' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%23909084' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .9rem center;
+  padding-right: 2.2rem;
+}
+
+:global(textarea.form-control) {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* manual-location helper link */
+:global(button.btn-link.p-0) { font-size: .82rem; }
+
+/* ──────────────────────────────────────────────
+   5.  Role cards
+   ────────────────────────────────────────────── */
+.roleCard {
+  display: flex;
+  gap: .8rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e0e4d2;
+  border-radius: 9px;
+  background: #fff;
+  margin-bottom: .8rem;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.roleCard:hover {
+  border-color: #caceb9;
+  box-shadow: 0 2px 8px rgb(0 0 0 / .05);
+}
+.roleCard strong     { font-weight: 600; }
+.roleCard .small     { font-size: .79rem; color: #62695e; line-height: 1.35; }
+:global(.form-check-input) { margin-top: .25rem; }
+
+/* ──────────────────────────────────────────────
+   6.  Confirm button
+   ────────────────────────────────────────────── */
+.confirmBtn {
+  background: #d4b950 !important;
+  border: none !important;
+  color: #fff !important;
+  padding: .55rem 3rem !important;
+  border-radius: 9999px !important;
+  font-weight: 600;
+  letter-spacing: .4px;
+  transition: background .15s ease, transform .15s ease;
+}
+.confirmBtn:hover {
+  background: #c5a342 !important;
+  transform: translateY(-1px);
+}
+
+/* ──────────────────────────────────────────────
+   7.  Responsive tweaks (unchanged markup)
+   ────────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+  .wrapper { border-radius: 0; padding: 2rem 1rem; }
+  :global(.form-label) { font-size: .82rem; }
+}
+
+/* ↓ replace the old .uploadLink rule with this */
+.uploadLink {
+  display: block;              /* forces a new line */
+  margin-top: .6rem;
+  background: none;
+  border: 0;
+  color: #53603e;
+  font-size: .84rem;
+  text-decoration: underline;
+  text-align: center;          /* keeps it centred under the avatar */
+  cursor: pointer;
+}
+.uploadLink:hover { color: #374124; }

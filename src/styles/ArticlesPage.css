@@ -1,0 +1,57 @@
+/* scope to the page */
+.articles-page .rail-title{
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: #0A0A0A;
+}
+
+.hashtags-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border:0 !important;
+  border-radius:10px;
+  margin:4px 0;
+  background:#fff;
+  color:#0A0A0A;
+  cursor:pointer;
+}
+.hashtags-item.active{
+  background:#5C6B3C !important; /* olive, like your theme */
+  color:#fff !important;
+}
+.hashtags-item:hover{ background:#F0F2E5; }
+
+/* top filter chips */
+.articles-toolbar{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.pill{
+  appearance:none;
+  border:1px solid #cfd3b5;
+  background:#fff;
+  color:#0A0A0A;
+  border-radius:20px;
+  padding:8px 14px;
+  font:500 13px/1.2 Poppins, system-ui, sans-serif;
+  cursor:pointer;
+}
+.pill.active{
+  background:#5C6B3C;
+  border-color:#5C6B3C;
+  color:#fff;
+}
+
+/* view more link */
+.view-more{
+  appearance:none;
+  border:0;
+  background:transparent;
+  text-decoration:underline;
+  font:600 14px/1.4 Poppins, system-ui, sans-serif;
+  color:#0A0A0A;
+  cursor:pointer;
+}

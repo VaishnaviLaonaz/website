@@ -1,0 +1,634 @@
+/* ----- theme tokens ----- */
+/* :root { */
+    /* --header-bar:  #F4F4EC; */
+    /* --header-logo: #566138; */
+    /* --header-pill: #FFFFFF; */
+    /* --header-cta:  #C9AE31; */
+    /* --header-olive:#566138; */
+  /* } */
+  
+  /* desktop pill nav hidden on phones */
+  /* @media (max-width: 767.98px) { .ah-pill { display:none !important; } } */
+  /* burger + dropdown hidden on desktop */
+  /* @media (min-width: 768px)   { .ah-burger, */
+                                 /* .mobile-drop { display:none !important; } } */
+  /* .bounded      { max-width: 1440px; margin-inline: auto; padding-inline: 1rem; } */
+
+  /* .mobile-drop a {
+    background: var(--header-olive);
+    color: #fff;
+    padding: .55rem 1.5rem;
+    border-radius: 9999px;
+    text-decoration: none;
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 500;
+    width: 80%;
+    max-width: 22rem;
+    transition: opacity .15s;
+  } */
+  /* .mobile-drop a:hover { opacity: .85; } */
+   
+
+  /* ==================== BOUNDING ==================== */
+/* .bounded { defined in tokens; file-safe if imported alone } */
+
+/* ==================== HEADER BASE ==================== */
+/* src/styles/auth_header.css */
+
+/* ==================== HEADER / FOOTER use design tokens ==================== */
+.header-tools{
+  /* control spacing between Search, Write, Bell, Avatar */
+  --header-gap: 40px;            /* tweak to 12 / 20 if you want tighter/looser */
+  display: flex;
+  gap: var(--header-gap);
+}
+
+
+
+.site-header {
+  background: var(--header-bg);
+  font-family: var(--ff-dm-sans);
+   padding: 0 40px 40px 40px; 
+  background: var(--header-bg);
+
+}
+
+
+.site-header .header-inner {
+  display: flex; align-items: center; gap: 26px;
+  height: var(--header-height);
+  position: relative; /* centers pill nav */
+}
+
+
+
+/* responsive utilities */
+@media (min-width: 768px){ .desktop-only{display:flex!important;} .mobile-only{display:none!important;} }
+@media (max-width: 767.98px){ .desktop-only{display:none!important;} .mobile-only{display:flex!important;} }
+
+/* ==================== PILL NAV (no blue on hover/click) ==================== */
+.pill-nav{
+  /* background:#fff; */
+  /* border-radius:9999px; */
+  padding:8px 16px;
+  gap:40px;
+  display:none;
+  position:absolute; left:50%; transform:translateX(-50%);
+  white-space:nowrap;
+  height: 60px;
+  width: 317px;
+  /* border:1px solid var(--clr-olive-sprout); */
+
+  /* set one text color for the whole pill */
+  display: flex;
+  align-items: center;    /* <-- centers links vertically */
+  justify-content: center;
+  --pill-text: var(--text-normal);
+  color: var(--pill-text);
+}
+@media (min-width:768px){ .pill-nav{display:flex;} }
+
+/* base link style */
+.pill-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  height: 20px;
+
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;         /* Bold */
+  font-size: 14px;
+  line-height: 140%;        /* ~19.6px */
+  letter-spacing: -0.025em; /* -2.5% */
+  text-align: center;
+
+  text-decoration: none;
+  color: #ffffff;           /* white text */
+  background: #000000;      /* black background */
+  border-radius: 9999px;    /* fully rounded pill */
+
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 1;
+}
+
+/* lock all states to the same color & no underline */
+.site-header .pill-link,
+.site-header .pill-link:link,
+.site-header .pill-link:visited,
+.site-header .pill-link:hover,
+.site-header .pill-link:active,
+.site-header .pill-link:focus,
+.site-header .pill-link:focus-visible{
+  color: var(--pill-text) !important;
+  text-decoration:none !important;
+  background:transparent !important;
+  outline:none; box-shadow:none;
+}
+
+/* keep active emphasis without color change */
+.pill-link.active{ font-weight:700; }
+
+
+/* ==================== SEARCH (shared visual for header search pill wrappers) */
+.hf-search {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--neutral-100);
+  border: 1px solid var(--clr-olive-sprout);
+  border-radius: 9999px;
+  padding: 10px 10px;
+  
+  min-width: 280px;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.hf-search input {
+  border: none; outline: none; background: transparent;
+  font: 400 14px/1.4 var(--ff-dm-sans);
+  color: var(--text-primary); width: 100%;
+}
+.hf-search:hover { background: #fff; border-color: var(--clr-olive-sprout); }
+.hf-search:focus-within { border-color: var(--gold); box-shadow: 0 0 0 2px color-mix(in oklab, var(--gold) 30%, transparent); }
+
+.header-tools .hf-search{
+  height: 48px;
+  min-width: 240px;
+  width: clamp(240px, 28vw, 360px);  
+}
+
+/* ==================== BUTTONS (mapped to your design sheet) ==================== */
+.btn-outline-gold{
+  --btn-border: var(--gold);
+  --btn-text: var(--gold-text);
+  --btn-bg: transparent;
+
+  --btn-h      : 40px;
+  --btn-padx-x  : 37px;
+  --btn-pady-y  : 20px; 
+  --btn-gap    : 10px;
+
+  display:inline-flex; 
+  align-items:center; 
+  gap:var(--btn-gap);
+  height: 48px;
+  padding: var(--btn-pady-y) var(--btn-padx-x);
+  font-weight:600; 
+  font-size:16px; 
+  line-height:150%;
+  text-decoration:none;
+  border:1px solid var(--btn-border);
+  color:var(--btn-text); 
+  background: transparent;  
+  border-radius:7px; 
+ 
+  transition: border-color .15s, color .15s, transform .02s, box-shadow .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-outline-gold,
+.btn-outline-gold:link,
+.btn-outline-gold:visited,
+.btn-outline-gold:hover,
+.btn-outline-gold:active,
+.btn-outline-gold:focus,
+.btn-outline-gold:focus-visible{
+  background-color: transparent !important;
+  color: var(--btn-text) !important;
+  text-decoration: none !important;
+  outline: none;
+  box-shadow: none;
+}
+/* Subtle feedback without fill */
+.btn-outline-gold:hover{ border-color: color-mix(in oklab, var(--gold) 75%, #fff 25%); }
+.btn-outline-gold:active{ transform: translateY(1px); }
+.btn-outline-gold:focus-visible{ box-shadow: 0 0 0 2px color-mix(in oklab, var(--gold) 35%, transparent); }
+
+
+.btn-48{
+  --btn-h     : 48px;
+  --btn-pad-x : 35px;
+  --btn-pad-y : 12px;
+  --btn-gap   : 10px; 
+  width: 142px; 
+}
+.btn-register{
+  --btn-h     : 48px;
+  --btn-pad-x : 35px;
+  --btn-pad-y : 12px;
+  --btn-gap   : 10px;  
+  width: 205px;
+}
+/* Auth CTA (REGISTER) */
+.btn-outline-cta{
+  border:1px solid var(--gold);
+  color:var(--gold-text);
+  border-radius:7px; padding:7px 24px;
+  text-decoration:none; font-weight:600; font-size:13px;
+  background:transparent;
+  transition: background .15s;
+}
+.btn-outline-cta:hover{ background: var(--clr-soft-wheat); }
+.btn-outline-cta:active{ background: color-mix(in oklab, var(--clr-soft-wheat) 55%, #fff); }
+
+/* ==================== MOBILE MENU ==================== */
+.ah-burger-icon { font-size: 24px; cursor: pointer; color: var(--olive); }
+.mobile-drop {
+  padding: 12px 0 20px;
+  gap: 12px;
+}
+.mobile-link {
+  background: var(--olive);
+  color: #fff;
+  padding: .55rem 1.5rem;
+  border-radius: 9999px;
+  text-decoration: none;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 500;
+  width: 80%;
+  max-width: 22rem;
+  transition: opacity .15s;
+}
+.mobile-link:hover { opacity: .9; }
+
+/* ==================== AVATAR MENU ==================== */
+.menu-panel {
+  min-width: 200px; background:#fff; border:1px solid var(--olive);
+  box-shadow: var(--shadow-soft); z-index:999;
+}
+.menu-item {
+  border: 1px solid var(--olive); border-radius: 10;
+  display:block; padding:.75rem 1rem; text-decoration:none;
+  color:var(--text-strong); transition:background .2s,color .2s;
+}
+.menu-item:hover { background: var(--olive); color:#fff; }
+
+
+/* ==================== FOOTER (responsive + no blue links) ==================== */
+:root{
+  /* --footer-inner-width: 1280px;  logo ... manage cookies target width */
+  --footer-row-height : 36px;
+  --footer-pad-block  : 40px;    
+  /* --footer-mobile-max : 800px;   */
+}
+
+.site-footer{
+  background: var(--footer-bg);
+  /* border-top: 1px solid var(--border-subtle); */
+  font-family: var(--ff-dm-sans);
+  width: 100%;
+}
+
+.footer-wrap{ padding: 40px;}
+/* { padding-block: var(--footer-pad-block); } */
+
+/* Content row: center it, let it be 100% but never exceed 1280 */
+.footer-bar{
+  box-sizing: border-box;
+  height: var(--footer-row-height);
+  margin-inline: auto;
+  width: 100%;
+  /* max-width: var(--footer-inner-width);  <= prevents overflow on smaller laptops */
+  padding-inline: clamp(16px, 4vw, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 24px;
+}
+
+.footer-left{
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(12px, 1.6vw, 24px);
+  min-height: var(--footer-row-height);
+}
+
+.footer-links{
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(16px, 2vw, 32px);  /* compress spacing slightly as width shrinks */
+  min-height: var(--footer-row-height);
+  white-space: nowrap;          /* stay one line on desktop/tablet */
+  flex-wrap: nowrap;
+}
+
+/* Footer links: never blue in any state */
+.site-footer .footer-link,
+.site-footer .footer-link:link,
+.site-footer .footer-link:visited,
+.site-footer .footer-link:hover,
+.site-footer .footer-link:active,
+.site-footer .footer-link:focus,
+.site-footer .footer-link:focus-visible{
+  color: var(--olive) !important;
+  background: transparent !important;
+  text-decoration: underline !important;
+  outline: none; box-shadow: none;
+}
+.footer-copy{ color: var(--text-normal); font-size: 14px; line-height: 1.5; }
+
+@media (max-width: 838px){
+  .footer-wrap{ padding-block: 40px; }
+
+  .footer-bar{
+    height: auto;
+    padding-inline: 16px;
+    /* width: 100%; */
+    /* max-width: none; */
+
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    row-gap: 16px;
+  }
+
+  .footer-left{
+    flex-direction: column;
+    gap: 8px;
+    min-height: auto;
+    align-items: center;
+    text-align: center;
+  }
+  .footer-links{
+    flex-direction: column;
+    gap: 24px;
+  }
+  .site-footer .footer-link{ font-size: 16px; }
+}
+
+
+/* ==================== ICON BUTTONS ==================== */
+
+
+
+/* Avatar button aligns to row height visually, keeps 40px avatar */
+.avatar-btn{
+  height: 48px;
+  padding: 0;
+}
+
+
+
+/* Optional: if the base header had extra gap between child groups */
+/* .header-inner{ gap: 12px; }  */
+/* .site-header .icon-btn {
+  position: relative; 
+} */
+
+/* Header: never underline link-styled buttons (e.g., the bell) */
+.site-header .btn-link,
+.site-header .btn-link:hover,
+.site-header .btn-link:focus,
+.site-header .btn-link:active,
+.site-header .icon-btn:hover,
+.site-header .icon-btn:focus,
+.site-header .icon-btn:active{
+  text-decoration: none !important;
+  background: transparent !important;  /* ensure no fill sneaks in */
+  border: 0;                            /* MDB sometimes adds focus borders */
+  box-shadow: none;                     /* no glow unless you add one */
+}
+
+/* Make sure the icon itself can’t inherit underline */
+.site-header .btn-link i,
+.site-header .btn-link svg,
+.site-header .icon-btn i,
+.site-header .icon-btn svg{
+  text-decoration: none;
+}
+
+
+
+
+/* ===== Comment composer  ===== */
+
+.comment-composer{
+  display: flex;
+  align-items: center;
+  gap: 16px;              /* spacing between input and button */
+}
+
+/* Rounded, calm-olive bordered input, 48px tall */
+.comment-input{
+  flex: 1 1 auto;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid #B9C39A;         /* subtle olive line like mock */
+  background: #FFFFFF;
+  color: var(--clr-text-primary, #0c0b0b);
+  outline: none;
+  box-shadow: none;
+}
+
+.comment-input::placeholder{
+  color: #96A082;                     /* muted olive placeholder */
+}
+
+/* Focus ring—soft olive */
+.comment-input:focus{
+  border-color: #9EAD7C;
+  box-shadow: 0 0 0 2px rgba(158,173,124,0.25);
+}
+
+/* ===== Solid Gold Pill Button ===== */
+.btn-outline-gold-solid{
+  /* design tokens with safe fallbacks */
+  --btn-bg    : var(--gold, #ebc711);           /* gold fill */
+  --btn-text  : var(#070707);      /* near-black text */
+  --btn-gap   : 10px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--btn-gap);
+
+  height: 48px;                  /* exact height from mock */
+  padding: 0 24px;               /* adjust if you want wider/narrower */
+  font-weight: 700;              /* bold like the mock */
+  font-size: 16px;
+  line-height: 1;
+
+  color: var(--btn-text);
+  background-color: var(--btn-bg);
+  border: 1px solid var(--btn-bg); /* no visible outline edge */
+  border-radius: 9999px;            /* pill shape */
+
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .15s, filter .15s, box-shadow .15s, transform .02s;
+}
+
+/* state styles */
+.btn-outline-gold-solid:hover{
+  /* subtle lift/brighten */
+  filter: brightness(1.05);
+  box-shadow: 0 2px 6px rgba(0,0,0,.12);
+}
+
+.btn-outline-gold-solid:active{
+  transform: translateY(1px);
+  filter: brightness(0.98);
+  box-shadow: 0 1px 3px rgba(0,0,0,.16);
+}
+
+.btn-outline-gold-solid:focus-visible{
+  outline: none;
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--gold, #D4B000) 28%, transparent),
+    0 1px 3px rgba(0,0,0,.10);
+}
+
+/* disabled look, if needed */
+.btn-outline-gold-solid:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+
+/* ===== Comment list visuals (matches the mock) ===== */
+.comment-item { padding: 8px 0 16px; }
+
+/* avatar sizes by depth */
+.comment-avatar { object-fit: cover; }
+.depth-0 .comment-avatar { width: 40px !important; height: 40px !important; }
+.depth-1 .comment-avatar,
+.depth-2 .comment-avatar { width: 32px !important; height: 32px !important; }
+
+/* author */
+.comment-header {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  color: #2B2B2B;
+  margin-bottom: 6px;
+}
+.comment-author { text-decoration: none; color: inherit; }
+
+/* body text like the mock: airy and readable */
+.comment-text{
+  font-size: 16px;
+  line-height: 1.7;
+  color: #0A0A0A;
+;
+  margin: 0 0 4px 0;
+}
+
+/* meta row: date + actions in one line */
+.comment-meta{
+  display: flex;
+  align-items: center;
+  gap: 20px;                 /* distance between groups */
+  color: #8C8C8C;
+  margin-top: 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+}
+
+/* icon + label pairs */
+.comment-meta .action{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;                  /* icon to text spacing */
+  cursor: pointer;
+  user-select: none;
+  transition: opacity .15s;
+}
+.comment-meta .action:hover{ opacity: .85; }
+
+/* icon size & inherit color */
+.comment-meta .action .fa,
+.comment-meta .action .far,
+.comment-meta .action .fas{
+  font-size: 18px;
+  color: currentColor;
+}
+
+/* color accents to match mock */
+.comment-meta .like  { color: #7E7E7E; }       /* neutral grey */
+.comment-meta .reply { color: #7E7E7E; }
+.comment-meta .edit  { color: #6E9A4C; }       /* olive/green pencil */
+.comment-meta .delete{ color: #E0584E; }       /* red trash */
+
+/* reply thread line */
+.comment-children{
+  border-left: 2px solid #C9CEB6;              /* soft olive divider */
+  margin-left: 20px;
+  padding-left: 16px;
+  margin-top: 16px;
+}
+
+/* ==== Composer (from previous step, included here for completeness) ==== */
+.comment-composer{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.comment-input{
+  flex: 1 1 auto;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid #B9C39A;
+  background: #FFFFFF;
+  color: var(--clr-text-primary, #333);
+  outline: none;
+  box-shadow: none;
+}
+.comment-input::placeholder{ color: #96A082; }
+.comment-input:focus{
+  border-color: #9EAD7C;
+  box-shadow: 0 0 0 2px rgba(158,173,124,0.25);
+}
+
+
+/* ===== Thread indentation & line for replies ===== */
+:root{
+  --thread-indent: 50px;     /* left gap before a reply block starts */
+  --thread-line   : #C9CEB6; /* soft olive divider */
+}
+
+.comment-item { padding: 8px 0 16px; }
+
+/* The <ul> that holds children replies */
+.comment-children{
+  position: relative;
+  margin-left: var(--thread-indent); /* creates the left gap */
+  padding-left: 16px;                /* space between line and reply content */
+  border-left: 2px solid var(--thread-line);
+  margin-top: 16px;                  /* space above the first reply block */
+}
+
+/* Ensure nested items don't carry extra left margins */
+.comment-children > .comment-item{ margin-left: 0; }
+
+/* Optional: a touch more breathing room above the very first child */
+.comment-children > .comment-item:first-child { margin-top: 8px; }
+
+/* Keep avatars looking aligned in nested threads */
+.comment-avatar { object-fit: cover; }
+.depth-0 .comment-avatar { width: 40px !important; height: 40px !important; }
+.depth-1 .comment-avatar,
+.depth-2 .comment-avatar { width: 32px !important; height: 32px !important; }
+
+
+/* src/styles/auth_header.css */
+.icon-btn {
+  position: relative;
+  padding: 0;
+  line-height: 1;
+}
+
+.icon-btn .bell-ico {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.icon-btn .badge {
+  font-size: 0.65rem;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  display: none !important;
+}

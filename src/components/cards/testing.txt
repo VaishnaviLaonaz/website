@@ -1,0 +1,507 @@
+
+// import React, { useState, useEffect } from "react";
+// import {
+//   MDBCard,
+//   MDBCardBody,
+//   MDBCardImage,
+//   MDBIcon,
+//   MDBBtn,
+// } from "mdb-react-ui-kit";
+// import { Link } from "react-router-dom";
+
+// import { useAuth } from "../../context/AuthContext";
+// import {
+//   likeArticle,
+//   streamLikes,
+//   streamCommentCount,
+//   toggleBookmark,
+//   streamBookmarks,
+// } from "../../configs/useArticles";
+
+// import CommentList from "./CommentList";
+
+// export default function ArticleCard({
+//   article,
+//   author,
+//   isOwner = false,
+//   onEdit,
+//   onDelete,
+// }) {
+//   /* ─────────── current user ─────────── */
+//   const { currentUser } = useAuth();
+//   const uid = currentUser?.uid;
+
+//   /* ─────────── live state ─────────── */
+//   const [likes, setLikes] = useState([]);            // user-ids who liked
+//   const [commentsCnt, setCommentsCnt] = useState(0);
+//   const [bookmarks, setBookmarks] = useState([]);    // user-ids who bookmarked
+//   const [showComments, setShowComments] = useState(false);
+
+//   /* ─────── subscribe to likes/bookmarks/commentCnt ─────── */
+//   useEffect(() => {
+//     if (!article?.id) return;
+//     const unsubLikes = streamLikes(article.id, setLikes);
+//     const unsubBooks = streamBookmarks(article.id, setBookmarks);
+//     const unsubCnt   = streamCommentCount(article.id, setCommentsCnt);
+//     return () => {
+//       unsubLikes();
+//       unsubBooks();
+//       unsubCnt();
+//     };
+//   }, [article?.id]);
+
+//   /* ─────────── derived flags ─────────── */
+//   const hasLiked      = uid && likes.includes(uid);
+//   const hasBookmarked = uid && bookmarks.includes(uid);
+
+//   /* ─────────── handlers ─────────── */
+//   const handleLike = async e => {
+//     e.stopPropagation();
+//     if (!uid) return;
+//     // optimistic UI flip
+//     setLikes(prev =>
+//       prev.includes(uid) ? prev.filter(u => u !== uid) : [...prev, uid]
+//     );
+//     try {
+//       await likeArticle(article.id, uid);
+//     } catch (err) {
+//       console.error("Failed to like:", err);
+//     }
+//   };
+
+//   const handleBookmark = async e => {
+//     e.stopPropagation();
+//     if (!uid) return;
+//     // optimistic UI flip
+//     setBookmarks(prev =>
+//       prev.includes(uid) ? prev.filter(u => u !== uid) : [...prev, uid]
+//     );
+//     try {
+//       await toggleBookmark(article.id, uid);
+//     } catch (err) {
+//       console.error("Failed to bookmark:", err);
+//     }
+//   };
+
+//   const toggleComments = e => {
+//     e.stopPropagation();
+//     setShowComments(prev => !prev);
+//   };
+
+//   /* ─────────── guard ─────────── */
+//   if (!article) return null;
+
+//   /* ─────────── render ─────────── */
+//   return (
+//     <MDBCard className="h-100 shadow-3-strong border-0 position-relative">
+//       {/* bookmark (top-right) */}
+//       <MDBBtn
+//         size="sm"
+//         color="link"
+//         className="position-absolute p-0"
+//         style={{ top: 8, right: 8 }}
+//         onClick={handleBookmark}
+//       >
+//         {hasBookmarked ? (
+//           <MDBIcon
+//             fas
+//             icon="bookmark"
+//             style={{ fontSize: "1.2rem", color: "#ffc107" }}
+//           />
+//         ) : (
+//           <MDBIcon
+//             far
+//             icon="bookmark"
+//             style={{ fontSize: "1.2rem", color: "#adb5bd" }}
+//           />
+//         )}
+//       </MDBBtn>
+
+//       {/* cover image */}
+//       <Link
+//         to={`/article/${article.id}`}
+//         style={{ textDecoration: "none", color: "inherit" }}
+//       >
+//         <MDBCardImage
+//           src={article.coverUrl || "https://placehold.co/600x400?text=Image"}
+//           alt={article.title}
+//           position="top"
+//           style={{ objectFit: "cover", height: "200px" }}
+//         />
+//       </Link>
+
+//       <MDBCardBody className="d-flex flex-column gap-1">
+//         {/* title */}
+//         <Link
+//           to={`/article/${article.id}`}
+//           style={{ textDecoration: "none", color: "inherit" }}
+//         >
+//           <h5 className="fw-bold mb-1">{article.title}</h5>
+//         </Link>
+
+//         {/* hashtag / category */}
+//         <span className="text-success fw-semibold mb-2">
+//           #{article.category || "General"}
+//         </span>
+
+//         {/* meta row */}
+//         <div className="d-flex align-items-center gap-3 text-muted small mb-3">
+//           <span>{new Date(article.createdAt).toLocaleDateString()}</span>
+
+//           <span>
+//             <MDBIcon icon="eye" className="me-1" />
+//             {article.viewCount ?? article.views ?? 0}
+//           </span>
+
+//           <span
+//             role="button"
+//             onClick={handleLike}
+//             style={{ color: hasLiked ? "#0d6efd" : undefined }}
+//           >
+//             {hasLiked ? (
+//               <MDBIcon fas icon="thumbs-up" className="me-1" />
+//             ) : (
+//               <MDBIcon far icon="thumbs-up" className="me-1" />
+//             )}
+//             {likes.length}
+//           </span>
+
+//           <span role="button" onClick={toggleComments}>
+//             <MDBIcon far icon="comment" className="me-1" />
+//             {commentsCnt}
+//           </span>
+//         </div>
+
+//         {/* author block */}
+//         {author && (
+//           <Link
+//             to={author.uid === uid ? "/profile" : `/u/${author.username || author.uid}`}
+//             className="d-flex align-items-center gap-3 mt-auto text-reset"
+//             style={{ textDecoration: "none" }}
+//           >
+//             <img
+//               src={author.avatarUrl || "https://placehold.co/40x40"}
+//               alt={author.displayName}
+//               className="rounded-circle flex-shrink-0"
+//               width="40"
+//               height="40"
+//             />
+//             <div>
+//               <div className="fw-semibold">{author.displayName}</div>
+//               {author.tagline && <small className="text-muted">{author.tagline}</small>}
+//             </div>
+//           </Link>
+//         )}
+
+//         {/* owner actions */}
+//         {isOwner && (
+//           <div className="d-flex gap-2 position-absolute" style={{ top: 8, left: 8 }}>
+//             <MDBBtn size="sm" color="link" className="p-0" onClick={() => onEdit?.(article)}>
+//               <MDBIcon fas icon="edit" />
+//             </MDBBtn>
+//             <MDBBtn size="sm" color="link" className="p-0 text-danger" onClick={() => onDelete?.(article.id)}>
+//               <MDBIcon fas icon="trash-alt" />
+//             </MDBBtn>
+//           </div>
+//         )}
+
+//         {/* inline comments pane */}
+//         {showComments && (
+//           <div className="mt-4">
+//             <CommentList articleId={article.id} currentUser={currentUser} />
+//           </div>
+//         )}
+//       </MDBCardBody>
+//     </MDBCard>
+//   );
+// }
+
+
+
+
+
+
+
+
+
+// src/pages/WriteArticle.jsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { createArticle, updateArticle } from '../../configs/useArticles';
+import { ref, get } from 'firebase/database';
+import { rtdb, db as fsDb } from '../../configs/firebase';
+import { doc, getDoc, setDoc, collection, serverTimestamp } from 'firebase/firestore';
+import 'mdb-react-ui-kit/dist/css/mdb.min.css';
+import '@fortawesome/fontawesome-free/css/all.min.css';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import TextStyle from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
+import LinkExt from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
+import Youtube from '@tiptap/extension-youtube';
+import Emoji from '@tiptap/extension-emoji';
+import TextAlign from '@tiptap/extension-text-align';
+import Picker from '@emoji-mart/react';
+import emojiData from '@emoji-mart/data';
+import DOMPurify from 'dompurify';
+import {
+  MDBContainer, MDBRow, MDBCol, MDBInput, MDBBadge, MDBBtn,
+  MDBIcon, MDBCardImage, MDBCard, MDBCardBody,
+} from 'mdb-react-ui-kit';
+
+export default function WriteArticle() {
+  const { currentUser } = useAuth();
+  const nav = useNavigate();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+  const [profile, setProfile] = useState(null);
+  const [allTags, setAllTags] = useState([]);
+
+
+  useEffect(() => {
+    if (!currentUser) return;
+    getDoc(doc(fsDb, 'users', currentUser.uid)).then(snap => snap.exists() && setProfile(snap.data())).catch(console.error);
+  }, [currentUser]);
+
+  const [title, setTitle] = useState('');
+  const [tags, setTags] = useState([]);
+  const [picker, showPicker] = useState(false);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({ heading: { levels: [1,2,3] } }),
+      Underline, TextStyle, Color, Highlight,
+      LinkExt.configure({ openOnClick: false }),
+      Image, Youtube.configure({ inline:false, width:640 }),
+      Emoji, TextAlign.configure({ types:['heading','paragraph'] })
+    ],
+    content: '<p> </p>'
+  });
+
+  useEffect(() => {
+    if (!isEdit) return;
+    get(ref(rtdb, `articles/${id}`)).then(snap => {
+      if (!snap.exists()) { alert('Article not found'); nav('/'); return; }
+      const art = snap.val(); setTitle(art.title); setTags(art.tags || []);
+      setTimeout(() => editor?.commands.setContent(art.body || '<p>...</p>'), 0);
+    });
+  }, [id, isEdit, nav, editor]);
+
+  const addTag = t => {
+    const norm = t.trim().toLowerCase();
+    if (norm && !tags.includes(norm)) setTags(prev => [...prev, norm]);
+  };
+  const removeTag = t => setTags(prev => prev.filter(x => x !== t));
+
+  const insertEmoji = e => {
+    editor.chain().focus().insertContent(e.native).run();
+    showPicker(false);
+  };
+
+  const handleImgUpload = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => editor.chain().focus().setImage({ src: reader.result }).run();
+    reader.readAsDataURL(f);
+  };
+
+  const handleSubmit = async () => {
+    const body = editor.getHTML();
+    if (!title.trim() || !body.replace(/<[^>]*>?/gm, '').trim()) return alert('Title and body are required');
+    const ts = Date.now();
+    const payload = { title, body, tags, authorId: currentUser.uid, createdAt: ts, updatedAt: ts };
+
+    let articleId;
+    if (isEdit) {
+      await updateArticle(id, payload);
+      articleId = id;
+    } else {
+      const res = await createArticle(payload);
+      articleId = res.id;
+    }
+
+    // upsert tags collection
+    const batchPromises = tags.map(tag => {
+      const tagId = tag.toLowerCase();
+      return setDoc(doc(fsDb, 'tags', tagId), { name: tag, updatedAt: serverTimestamp() });
+    });
+    await Promise.all(batchPromises);
+
+    nav(`/article/${articleId}`);
+  };
+
+  const authorName = profile?.username || [profile?.firstName, profile?.lastName].filter(Boolean).join(' ') || currentUser?.email || 'Unknown';
+
+ return (
+    <MDBContainer className="py-5">
+      <MDBRow center>
+        <MDBCol md="10" lg="8">
+
+          {/* User Avatar & Name */}
+          <div className="d-flex align-items-center gap-3 mb-4">
+            <MDBCardImage
+              src={currentUser.photoURL}
+              alt="Avatar"
+              className="rounded-circle"
+              style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+            />
+            <h5 className="mb-0">{authorName}</h5>
+          </div>
+
+          {/* Header */}
+          <div className="mb-4 text-center">
+            <small className="text-muted">{new Date().toLocaleDateString()}</small>
+            <MDBInput
+              className="mt-2"
+              placeholder="TITLE"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              size="lg"
+            />
+          </div>
+
+          {/* Tags */}
+            <div className="d-flex flex-wrap gap-2 mb-2 justify-content-center">
+            {tags.map(t => (
+              <MDBBadge key={t} pill color="info" className="px-2 py-1 d-flex align-items-center">
+                #{t}
+                <MDBIcon fas icon="times-circle" className="ms-1" onClick={() => removeTag(t)} />
+              </MDBBadge>
+            ))}
+            <MDBInput
+              placeholder="+ Tag"
+              style={{ width: 100, fontSize: '0.9rem' }}
+              size="sm"
+              onKeyDown={e => {
+                if (e.key === 'Enter' && e.target.value.trim()) {
+                  addTag(e.target.value);
+                  e.target.value = '';
+                }
+              }}
+            />
+          </div>
+
+
+          {/* Toolbar */}
+          <MDBCard className="mb-3 shadow-sm">
+            <MDBCardBody className="d-flex flex-wrap gap-2 bg-white">
+              {[ 
+                { cmd: 'toggleBold', icon: 'bold' },
+                { cmd: 'toggleItalic', icon: 'italic' },
+                { cmd: 'toggleUnderline', icon: 'underline' },
+                { cmd: 'toggleStrike', icon: 'strikethrough' },
+                { cmd: 'toggleHighlight', icon: 'paint-brush' }
+              ].map(({ cmd, icon }) => (
+                <MDBBtn
+                  key={cmd}
+                  size="sm"
+                  outline
+                  color={editor?.isActive(cmd.replace('toggle', '').toLowerCase()) ? 'primary' : 'secondary'}
+                  onClick={() => editor.chain().focus()[cmd]().run()}
+                >
+                  <MDBIcon fas icon={icon} />
+                </MDBBtn>
+              ))}
+
+              {/* Color Picker */}
+              <div className="input-group input-group-sm me-2" style={{ width: 40 }}>
+                <input
+                  type="color"
+                  className="form-control form-control-color p-0"
+                  title="Text Color"
+                  onChange={e => editor.chain().focus().setColor(e.target.value).run()}
+                />
+              </div>
+
+              <MDBBtn size="sm" outline color="secondary" onClick={() => editor.chain().focus().toggleBulletList().run()}>
+                <MDBIcon fas icon="list-ul" />
+              </MDBBtn>
+              {['left','center','right'].map(align => (
+                <MDBBtn
+                  key={align}
+                  size="sm"
+                  outline
+                  color="secondary"
+                  onClick={() => editor.chain().focus().setTextAlign(align).run()}
+                >
+                  <MDBIcon fas icon={`align-${align}`} />
+                </MDBBtn>
+              ))}
+              <MDBBtn
+                size="sm"
+                outline
+                color="secondary"
+                onClick={() => {
+                  const url = prompt('Enter URL');
+                  if (url) editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+                }}
+              >
+                <MDBIcon fas icon="link" />
+              </MDBBtn>
+
+              {/* Emoji */}
+              <MDBBtn size="sm" outline color="secondary" onClick={() => showPicker(v => !v)}>
+                <MDBIcon fas icon="smile" />
+              </MDBBtn>
+              {picker && (
+                <Picker
+                  data={emojiData}
+                  onEmojiSelect={insertEmoji}
+                  theme="light"
+                  style={{ position: 'absolute', bottom: 100, left: 50, zIndex: 1000 }}
+                />
+              )}
+
+              <MDBBtn size="sm" outline color="secondary" onClick={() => document.getElementById('img-upload').click()}>
+                <MDBIcon fas icon="image" />
+                <input id="img-upload" type="file" accept="image/*" hidden onChange={handleImgUpload} />
+              </MDBBtn>
+              <MDBBtn size="sm" outline color="secondary" onClick={() => editor.chain().focus().undo().run()}>
+                <MDBIcon fas icon="undo" />
+              </MDBBtn>
+              <MDBBtn size="sm" outline color="secondary" onClick={() => editor.chain().focus().redo().run()}>
+                <MDBIcon fas icon="redo" />
+              </MDBBtn>
+            </MDBCardBody>
+          </MDBCard>
+
+          {/* Editor Canvas */}
+          <div className="mb-3">
+            <label className="form-label fw-bold">Write Your Article</label>
+            <div
+              className="bg-white shadow-sm rounded border"
+              style={{ minHeight: 400, padding: '1rem' }}
+            >
+              <EditorContent editor={editor} />
+            </div>
+          </div>
+
+          {/* Live Preview */}
+          <div className="mb-4">
+            <h5 className="mb-2">Preview</h5>
+            <div
+              className="p-3 bg-light rounded shadow-sm"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(editor?.getHTML() || '') }}
+            />
+          </div>
+
+          {/* Publish Button */}
+          <div className="text-center">
+            <MDBBtn color="primary" size="lg" onClick={handleSubmit} className="d-flex align-items-center mx-auto">
+              <MDBIcon fas icon="paper-plane" className="me-2" /> Publish
+            </MDBBtn>
+          </div>
+          
+        </MDBCol>
+      </MDBRow>
+    </MDBContainer>
+  );
+}
+
+
+

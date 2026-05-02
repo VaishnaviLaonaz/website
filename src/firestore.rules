@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------- USER PROFILES ---------- */
+    match /users/{uid} {
+      /* Anyone can read public profile; only the owner can write */
+      allow read : if true;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    /* ---------- USERNAME CLAIM TABLE ---------- */
+    match /usernames/{name} {
+      allow read: if true;                                 // needed for lookup
+      allow create: if request.auth != null
+                    && !exists(/databases/$(database)/documents/usernames/$(name));
+      /* Never allow update/delete so handles stay reserved */
+    }
+
+      /* public avatars – owner can write */
+   match /avatars/{uid}/{file=**} {
+     allow read : if true;                            // anyone can see avatars
+     allow write: if request.auth != null
+                 && request.auth.uid == uid;         // only owner uploads
+   }
+
+    /* ---------- ROLES MASTER LIST ---------- */
+    match /roles/{roleId} {
+      allow read: if true;                                 // public
+      /* write disabled (managed by you in console) */
+    }
+
+    /* ---------- ARTICLES ---------- */
+    match /articles/{id} {
+      allow read: if true;
+      allow create, update, delete:
+        if request.auth != null
+           && request.auth.uid == (
+                request.method == 'create'
+                  ? request.resource.data.authorId         // new doc
+                  : resource.data.authorId                 // updating
+              );
+    }
+    
+     match /followers/{uid}/people/{followerId} {
+      allow read, write: if request.auth.uid == uid     // owner’s list
+                         || request.auth.uid == followerId; // person doing the follow
+    }
+    match /following/{uid}/people/{targetId} {
+      allow read, write: if request.auth.uid == uid
+                         || request.auth.uid == targetId;
+    }
+
+     /* ---------- ARTICLE LIKES ---------- */
+ match /likes/{likeId} {
+   allow read: if true;
+   allow create, delete: if request.auth != null
+                         && request.auth.uid == request.resource.data.userHandle;
+ }
+
+ /* ---------- ARTICLE COMMENTS ---------- */
+ match /comments/{commentId} {
+   allow read: if true;
+   allow create: if request.auth != null;
+   /* no update/delete – let cloud-function cascade handle it */
+ }
+
+
+    /* ---------- BOOKMARKS (user sub-collection) ---------- */
+    match /bookmarks/{uid}/items/{itemId} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid;
+    }
+
+    /* ---------- EVERYTHING ELSE DENIED ---------- */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
