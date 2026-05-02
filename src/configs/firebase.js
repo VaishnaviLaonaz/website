@@ -30,11 +30,15 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth    = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
-export const db      = initializeFirestore(app, { 
-  experimentalAutoDetectLongPolling: true,
-  useFetchStreams: false,
-  ignoreUndefinedProperties: true, 
-});
+export const db = initializeFirestore(
+  app,
+  {
+    experimentalForceLongPolling: true,
+    useFetchStreams: false,
+    ignoreUndefinedProperties: true,
+  },
+  "laonaz"
+);
 
 export const rtdb = getDatabase(app)
 
