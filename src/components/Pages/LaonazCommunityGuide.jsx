@@ -178,7 +178,7 @@ export default function LaonazCommunityGuide() {
           <h3>We aim to protect trust by:</h3>
           <ul>
             <li>Using login-based access for community features.</li>
-            <li>Keeping profile and article data structured in Firebase.</li>
+            <li>Keeping profile and article data structured in database.</li>
             <li>Showing only community-relevant public information.</li>
             <li>Encouraging safe, educational, and respectful content.</li>
             <li>Not selling personal user data.</li>

@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import "../../styles/community-subscribe-section.css";
 
 export default function CommunitySubscribeSection({
-  youtubeUrl = "https://www.youtube.com/",
-  instagramUrl = "https://www.instagram.com/",
+  youtubeUrl = "/",
+  instagramUrl = "https://www.instagram.com/laonaz.community/",
 }) {
   return (
     <section className="community-subscribe-section bounded">
@@ -66,13 +66,18 @@ export default function CommunitySubscribeSection({
             </span>
           </a>
 
-          <Link to="/login" className="community-social-link">
-            <span className="community-social-icon">✉</span>
-            <span>
-              <strong>Newsletter</strong>
-              <small>Get updates, articles, and community news</small>
-            </span>
-          </Link>
+          <a
+  href="https://mail.google.com/mail/?view=cm&fs=1&to=hello@laonaz.co.in&su=Contact%20Laonaz%20Community&body=Hello%20Laonaz%20Team%2C%0A%0AI%20would%20like%20to%20contact%20you%20about%3A"
+  className="community-social-link"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  <span className="community-social-icon">✉</span>
+  <span>
+    <strong>Contact us</strong>
+    <small>Email us directly at hello@laonaz.co.in</small>
+  </span>
+</a>
         </div>
       </div>
     </section>

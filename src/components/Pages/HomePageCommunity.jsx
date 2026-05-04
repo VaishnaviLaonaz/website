@@ -144,7 +144,7 @@ export default function Home() {
                   #Welcome
                 </div>
 
-                <div className="d-flex align-items-center gap-4 mt-2 mb-3 u-body">
+                {/* <div className="d-flex align-items-center gap-4 mt-2 mb-3 u-body">
                   <span>
                     October 10, 2023
                   </span>
@@ -154,20 +154,20 @@ export default function Home() {
                     
                   >
                     {/* <MDBIcon fas icon="eye" />  */}
-                     <img
+                     {/* <img
                       src={ViewIcon}
                       alt=""
                       className="fas"
                       />
                     165
-                  </span>
+                  </span> */}
 
-                  <span
+                  {/* <span
                     className="d-flex align-items-center gap-1"
                     
                   >
                     {/* <MDBIcon fas icon="thumbs-up" /> */}
-                    <img
+                    {/* <img
                                   
                       src={LikeIcon}
                       alt=""
@@ -175,7 +175,7 @@ export default function Home() {
                     />
                      165
                   </span>
-                </div>
+                </div>  */}
 
                 <div className="d-flex align-items-center gap-3">
                   <Link to="/community-guide">
@@ -343,8 +343,8 @@ export default function Home() {
         </MDBContainer>
       </section>
       <CommunitySubscribeSection
-        youtubeUrl="https://www.youtube.com/@your-channel"
-        instagramUrl="https://www.instagram.com/your-page"
+        youtubeUrl="/"
+        instagramUrl="https://www.instagram.com/laonaz.community/"
       />
     </main>
   );
