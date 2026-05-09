@@ -1768,145 +1768,720 @@
 
 
 
+//Below is working before cost cutting
+
+
+// // CommentList
+// import { useState, useEffect, useRef } from "react";
+// import {
+//   ref, push, set, onValue, get, remove,
+//   update, runTransaction
+// } from "firebase/database";
+// import { doc, getDoc } from "firebase/firestore";
+// import { rtdb, db as fsDb } from "../../configs/firebase";
+
+// import { tryNotify } from "../../configs/notifications";
+// import { get as rtdbGet, ref as rtdbRef } from "firebase/database";
+
+// import {
+//   streamCommentLikes,
+//   likeComment
+// } from "../../configs/useArticles";
+// import { MDBInputGroup, MDBBtn, MDBIcon } from "mdb-react-ui-kit";
+// import { Link } from "react-router-dom";
+// import '../../styles/auth_header.css';
+
+// /* ─────────── ICON ASSETS (your SVGs) ─────────── */
+// import LikeIcon from '../../images/icons/like icon.svg';
+// import CommentIcon from '../../images/icons/comment icon.svg';
+// import EditIcon from '../../images/icons/edit icon.svg';
+// import DeleteIcon from '../../images/icons/delete icon.svg';
 
 
 
-// CommentList
+// export default function CommentList({ articleId, currentUser }) {
+//   const uid       = currentUser?.uid;
+//   const avatarUrl = currentUser?.photoURL || null;
+
+//   const [tree,    setTree]    = useState([]);
+//   const [likes,   setLikes]   = useState({});
+//   const [draft,   setDraft]   = useState("");
+//   const [slugMap, setSlugMap] = useState({});
+//   const [mySlug,  setMySlug]  = useState(null);
+
+//   const bottomRef = useRef(null);
+//   const cPath     = cid => `comments/${articleId}/${cid}`;
+//   const counterRef = ref(rtdb, `articles/${articleId}/commentsCount`);
+
+//   // subscribe to comment likes per comment/reply
+//   useEffect(() => {
+//     if (!articleId) return;
+//     // const unsub = streamCommentLikes(articleId, setLikes);
+//     // const unsub = streamCommentLikes(articleId, newMap =>
+//     //   setLikes(prev => ({ ...prev, ...newMap }))
+//     // );
+//     const unsub = streamCommentLikes(articleId, setLikes);
+//     return () => unsub?.();
+//   }, [articleId]);
+
+//   /* fetch my slug */
+//   useEffect(() => {
+//     if (!uid) return;
+//     (async () => {
+//       try {
+//         const snap = await getDoc(doc(fsDb, "users", uid));
+//         if (snap.exists()) setMySlug(snap.data().username || uid);
+//       } catch {}
+//     })();
+//   }, [uid]);
+
+//   // build tree structure
+//   useEffect(() => {
+//     if (!articleId) return;
+//     const unsub = onValue(ref(rtdb, `comments/${articleId}`), async snap => {
+//       const map = {};
+//       const uidsToFetch = new Set();
+
+//       snap.forEach(c => {
+//         const n = { id: c.key, ...c.val(), children: [] };
+//         map[n.id] = n;
+//         if (!slugMap[n.uid]) uidsToFetch.add(n.uid);
+//       });
+
+//       if (uidsToFetch.size) {
+//         const fetched = await Promise.all(
+//           [...uidsToFetch].map(async id => {
+//             try {
+//               const s = await getDoc(doc(fsDb, "users", id));
+//               return [id, s.exists() ? s.data().username || id : id];
+//             } catch {
+//               return [id, id];
+//             }
+//           })
+//         );
+//         setSlugMap(prev => ({ ...prev, ...Object.fromEntries(fetched) }));
+//       }
+
+//       const roots = [];
+//       Object.values(map).forEach(n => {
+//         if (n.parentId && map[n.parentId]) map[n.parentId].children.push(n);
+//         else roots.push(n);
+//       });
+
+//       setTree(roots);
+//       // setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
+//     });
+//     return () => unsub();
+//   }, [articleId, slugMap]);
+
+//   const incrementCounter = delta =>
+//     runTransaction(counterRef, cur => Math.max((cur || 0) + delta, 0));
+
+//   const addComment = async (text, parentId = null) => {
+//     if (!uid || !text.trim()) return;
+//     let slug = mySlug;
+//     if (!slug) {
+//       try {
+//         const s = await getDoc(doc(fsDb, "users", uid));
+//         slug = s.exists() ? s.data().username || uid : uid;
+//         setMySlug(slug);
+//       } catch {
+//         slug = uid;
+//       }
+//     }
+//     const newRef = push(ref(rtdb, `comments/${articleId}`));
+//     await set(newRef, {
+//       uid,
+//       username: slug,
+//       avatarUrl,
+//       text: text.trim(),
+//       parentId,
+//       createdAt: Date.now(),
+//     });
+//     await incrementCounter(1);
+//     const artSnap = await rtdbGet(rtdbRef(rtdb, `articles/${articleId}`));
+//       const article = artSnap.val();
+//       if (article && article.authorId !== uid) {
+//         const actorSnap = await getDoc(doc(fsDb, "users", uid));
+//         const actor    = actorSnap.exists() ? actorSnap.data() : {};
+//         await tryNotify(article.authorId, {
+//           type: "comment",
+//           actorId:   uid,
+//           actorName:
+//             actor.username ||
+//             [actor.firstName, actor.lastName].filter(Boolean).join(" ") ||
+//             actor.email ||
+//             "Someone",
+//           actorAvatar: avatarUrl || "",
+//           articleId,
+//           articleTitle: article.title || "",
+//         });
+//       }
+//   };
+
+//   const deleteComment = async id => {
+//     await remove(ref(rtdb, cPath(id)));
+//     await incrementCounter(-1);
+//   };
+
+//   // const toggleLike = async id => {
+//   //   if (!uid) return;
+//   //   await likeComment(articleId, id, uid);
+//   // };
+
+//   const toggleLike = async id => {
+//         if (!uid) return;
+    
+//         /* optimistic local update */
+//         setLikes(prev => {
+//           const arr = prev[id] || [];
+//           const nextArr = arr.includes(uid)
+//             ? arr.filter(x => x !== uid)
+//             : [...arr, uid];
+//           return { ...prev, [id]: nextArr };
+//         });
+    
+//         try {
+//           await likeComment(articleId, id, uid);         // RTDB write + notification
+//         } catch (err) {
+//           console.error(err);
+//           /* roll-back if the write failed */
+//           setLikes(prev => {
+//             const arr = prev[id] || [];
+//             const nextArr = arr.includes(uid)
+//               ? arr.filter(x => x !== uid)
+//               : [...arr, uid];
+//             return { ...prev, [id]: nextArr };
+//           });
+//         }
+//       };
+
+//   const saveEdit = async (id, text) => {
+//     if (!text.trim()) return;
+//     await update(ref(rtdb, cPath(id)), { text: text.trim(), updatedAt: Date.now() });
+//   };
+
+//   const Meta = ({ c }) => (
+//     <small className="text-muted">
+//       {new Date(c.createdAt).toLocaleDateString()}
+//       {c.updatedAt && <> · edited {new Date(c.updatedAt).toLocaleTimeString()}</>}
+//     </small>
+//   );
+
+//   const Node = ({ node, depth }) => {
+//     const mine  = uid === node.uid;
+//     const liked = (likes[node.id] || []).includes(uid);
+//     const slug  = node.username || slugMap[node.uid] || node.uid;
+//     const link  = mine ? "/profile" : `/u/${slug}`;
+
+//     const [editing, setEditing] = useState(false);
+//     const [eDraft, setEDraft]   = useState(node.text);
+//     const [open, setOpen]       = useState(false);
+//     const [rDraft, setRDraft]   = useState("");
+//     const repliesCount = node.children?.length || 0;
+
+//     // return (
+//     //   <li className="mb-3" style={{ marginLeft: depth * 24 }}>
+//     //     <div className="d-flex gap-3">
+//     //       <Link to={link} className="flex-shrink-0">
+//     //         <img src={node.avatarUrl || "https://placehold.co/32x32"} width="32" height="32" className="rounded-circle" />
+//     //       </Link>
+//     //       <div className="flex-grow-1">
+//     //         <div className="d-flex justify-content-between">
+//     //           <Link to={link} className="fw-semibold text-reset" style={{ textDecoration: "none" }}>
+//     //             {slug}
+//     //           </Link>
+//     //           <Meta c={node} />
+//     //         </div>
+
+//     //         {editing ? (
+//     //           <MDBInputGroup className="my-2">
+//     //             <input className="form-control" value={eDraft} onChange={e => setEDraft(e.target.value)} />
+//     //             <MDBBtn type="button" size="sm" onClick={() => { saveEdit(node.id, eDraft); setEditing(false); }}>Save</MDBBtn>
+//     //             <MDBBtn type="button" size="sm" color="link" onClick={() => setEditing(false)}>Cancel</MDBBtn>
+//     //           </MDBInputGroup>
+//     //         ) : (
+//     //           <p className="mb-1">{node.text}</p>
+//     //         )}
+
+//     //         <div className="d-flex gap-3 small text-muted">
+//     //           <span onClick={() => uid && toggleLike(node.id)} style={{ cursor: uid ? 'pointer' : 'not-allowed', opacity: uid ? 1 : 0.5 }}>
+//     //             <MDBIcon fas={liked} far={!liked} icon="thumbs-up" className="me-1" />
+//     //             {(likes[node.id] || []).length}
+//     //           </span>
+//     //           {uid && (
+//     //             <span onClick={() => setOpen(o => !o)} style={{ cursor: 'pointer' }}>
+//     //               <MDBIcon far icon="reply" className="me-1" /> Reply
+//     //             </span>
+//     //           )}
+//     //           {mine && !editing && (
+//     //             <>  
+//     //               <span onClick={() => setEditing(true)} style={{ cursor: 'pointer' }}>
+//     //                 <MDBIcon fas icon="edit" className="me-1" />Edit
+//     //               </span>
+//     //               <span onClick={() => deleteComment(node.id)} style={{ cursor: 'pointer' }}>
+//     //                 <MDBIcon fas icon="trash-alt" className="me-1 text-danger" />Delete
+//     //               </span>
+//     //             </>
+//     //           )}
+//     //         </div>
+
+//     //         {open && uid && (
+//     //           <MDBInputGroup className="mt-3">
+//     //             <input
+//     //               className="form-control"
+//     //               placeholder="Write a reply…"
+//     //               value={rDraft}
+//     //               onChange={e => setRDraft(e.target.value)}
+//     //             />
+//     //             <MDBBtn type="button" size="sm" onClick={() => { addComment(rDraft, node.id); setRDraft(""); setOpen(false); }}>
+//     //               Reply
+//     //             </MDBBtn>
+//     //           </MDBInputGroup>
+//     //         )}
+//     //       </div>
+//     //     </div>
+
+//     //     {node.children?.length > 0 && (
+//     //       <ul className="list-unstyled mt-3">
+//     //         {node.children.map(ch => <Node key={ch.id} node={ch} depth={depth + 1} />)}
+//     //       </ul>
+//     //     )}
+//     //   </li>
+//     // );
+  
+//     return (
+//       <li className={`comment-item depth-${depth}`} >
+//         <div className="d-flex gap-3">
+//           <Link to={link} className="flex-shrink-0">
+//             <img
+//               src={node.avatarUrl || "https://placehold.co/40x40"}
+//               width={depth === 0 ? 40 : 32}
+//               height={depth === 0 ? 40 : 32}
+//               className="rounded-circle comment-avatar"
+//             />
+//           </Link>
+
+//           <div className="flex-grow-1">
+//             {/* Header: name (bold) */}
+//             <div className="comment-header">
+//               <Link to={link} className="comment-author text-reset">
+//                 {slug}
+//               </Link>
+//               {/* optional subline if you store it later */}
+//             </div>
+
+//             {/* Body */}
+//            {editing ? (
+//   <div className="comment-composer my-2">
+//     <input
+//       className="form-control comment-input"
+//       value={eDraft}
+//       placeholder="Edit your comment…"
+//       onChange={e => setEDraft(e.target.value)}
+//       onKeyDown={e => {
+//         if (e.key === 'Enter' && !e.shiftKey) {
+//           e.preventDefault();
+//           saveEdit(node.id, eDraft); setEditing(false);
+//         }
+//       }}
+//     />
+//     <button
+//       type="button"
+//       className="btn-outline-gold-solid"
+//       onClick={() => { saveEdit(node.id, eDraft); setEditing(false); }}
+//     >
+//       Save
+//     </button>
+//     <button
+//       type="button"
+//       className="btn-cancel-link"
+//       onClick={() => setEditing(false)}
+//     >
+//       Cancel
+//     </button>
+//   </div>
+// ) : (
+//   <p className="comment-text mb-0">{node.text}</p>
+// )}
+
+
+//             {/* Meta row exactly like the mock */}
+//             <div className="comment-meta">
+//               <Meta c={node} />
+
+//               <span
+//                 type="button"
+//                 className="action like"
+//                 onClick={() => uid && toggleLike(node.id)}
+//                 // style={{ cursor: uid ? 'pointer' : 'not-allowed', opacity: uid ? 1 : 0.5 }}
+//                 title={liked ? "Unlike" : "Like"}
+//               >
+//                 {/* <MDBIcon icon="thumbs-up" fas={liked} far={!liked} /> */}
+//                 <img
+//                   src={LikeIcon}
+//                   alt=""
+//                   className="comment-action-icon"
+//                   style={{ width: 18, height: 18, objectFit: 'contain' }}
+//                 />
+//                 {(likes[node.id] || []).length}
+//               </span>
+
+//               <span
+//                 className="action reply"
+//                 onClick={() => uid && setOpen(o => !o)}
+//                 style={{ cursor: uid ? 'pointer' : 'not-allowed', opacity: uid ? 1 : 0.5 }}
+//                 title="Reply"
+//               >
+//                 {/* <MDBIcon far icon="comment" /> */}
+//                 <img
+//                   src={CommentIcon}
+//                   alt=""
+//                   className="comment-action-icon"
+//                   style={{ width: 18, height: 18, objectFit: 'contain' }}
+//                 />
+//                 {repliesCount === 1 ? "1 reply" : `${repliesCount} replies`}
+//               </span>
+
+//               {mine && !editing && (
+//                 <>
+//                   <span className="action edit" onClick={() => setEditing(true)} title="Edit">
+//                     {/* <MDBIcon fas icon="pen" /> */}
+//                     <img
+//                       src={EditIcon}
+//                       alt=""
+//                       className="comment-action-icon"
+//                       style={{ width: 18, height: 18, objectFit: 'contain' }}
+//                     />
+//                     edit
+//                   </span>
+//                   <span className="action delete" onClick={() => deleteComment(node.id)} title="Delete">
+//                     <img
+//                       src={DeleteIcon}
+//                       alt=""
+//                       className="comment-action-icon"
+//                       style={{ width: 18, height: 18, objectFit: 'contain' }}
+//                     />
+//                     {/* <MDBIcon fas icon="trash-alt" /> */}
+//                     delete
+//                   </span>
+//                 </>
+//               )}
+//             </div>
+
+//             {/* Inline reply composer */}
+//            {open && uid && (
+//               <div className="comment-composer mt-3">
+//                 <input
+//                   className="form-control comment-input"
+//                   placeholder="Write a reply…"
+//                   value={rDraft}
+//                   onChange={e => setRDraft(e.target.value)}
+//                   onKeyDown={e => {
+//                     if (e.key === 'Enter' && !e.shiftKey) {
+//                       e.preventDefault();
+//                       addComment(rDraft, node.id); setRDraft(""); setOpen(false);
+//                     }
+//                   }}
+//                 />
+//                 <button
+//                   type="button"
+//                   className="btn-outline-gold-solid"
+//                   onClick={() => { addComment(rDraft, node.id); setRDraft(""); setOpen(false); }}
+//                 >
+//                   Reply
+//                 </button>
+//               </div>
+//             )}
+//           </div>
+     
+          
+//         </div>
+
+//         {/* Replies with thread line */}
+//         {node.children?.length > 0 && (
+//           <ul className="comment-children list-unstyled">
+//             {node.children.map(ch => <Node key={ch.id} node={ch} depth={depth + 1} />)}
+//           </ul>
+//         )}
+//       </li>
+//     );
+//   };
+
+  
+
+//   // return (
+//   //   <div>
+//   //     {uid ? (
+//   //       <MDBInputGroup className="comment-composer mb-4">
+//   //         <textarea rows={2} className="form-control comment-input" value={draft} onChange={e => setDraft(e.target.value)} 
+//   //         onKeyDown={e => {
+//   //             if (e.key === 'Enter' && !e.shiftKey) {
+//   //               e.preventDefault();
+//   //               addComment(draft); setDraft("");
+//   //             }
+//   //           }}
+//   //           placeholder="Help extend the article with your comments" />
+//   //         <MDBBtn type="button"  className="btn-outline-gold btn-48" onClick={() => { addComment(draft); setDraft(""); }}>Comment</MDBBtn>
+//   //       </MDBInputGroup>
+//   //     ) : (
+//   //       <p className="text-muted fst-italic mb-4">Please log in to post comments.</p>
+//   //     )}
+
+//   //     <ul className="list-unstyled">
+//   //       {tree.map(n => <Node key={n.id} node={n} depth={0} />)}
+//   //       <li ref={bottomRef} />
+//   //     </ul>
+//   //   </div>
+//   // );
+
+//  return (
+//     <div>
+//       {uid ? (
+//         /* ==== Composer redesigned to match the mock ==== */
+//         <div className="comment-composer mb-4">
+//           <input
+//             className="form-control comment-input"
+//             type="text"
+//             placeholder="Help extend the article with your comments"
+//             value={draft}
+//             onChange={e => setDraft(e.target.value)}
+//             onKeyDown={e => {
+//               if (e.key === 'Enter' && !e.shiftKey) {
+//                 e.preventDefault();
+//                 addComment(draft); setDraft("");
+//               }
+//             }}
+//           />
+//           <button
+//             type="button"
+//             className="btn-outline-gold-solid"
+//             onClick={() => { addComment(draft); setDraft(""); }}
+//           >
+//             Comment
+//           </button>
+//         </div>
+//       ) : (
+//         <p className="text-muted fst-italic mb-4">Please log in to post comments.</p>
+//       )}
+
+//       <ul className="list-unstyled">
+//         {tree.map(n => <Node key={n.id} node={n} depth={0} />)}
+//         <li ref={bottomRef} />
+//       </ul>
+//     </div>
+//   );
+
+
+// }
+
+
+//above is correct before cost cutting working one
+
+// CommentList.jsx
 import { useState, useEffect, useRef } from "react";
 import {
-  ref, push, set, onValue, get, remove,
-  update, runTransaction
+  ref,
+  push,
+  set,
+  onValue,
+  get,
+  remove,
+  update,
+  runTransaction,
+  query,
+  orderByChild,
+  limitToLast,
 } from "firebase/database";
 import { doc, getDoc } from "firebase/firestore";
-import { rtdb, db as fsDb } from "../../configs/firebase";
-
-import { tryNotify } from "../../configs/notifications";
-import { get as rtdbGet, ref as rtdbRef } from "firebase/database";
-
-import {
-  streamCommentLikes,
-  likeComment
-} from "../../configs/useArticles";
-import { MDBInputGroup, MDBBtn, MDBIcon } from "mdb-react-ui-kit";
 import { Link } from "react-router-dom";
-import '../../styles/auth_header.css';
 
-/* ─────────── ICON ASSETS (your SVGs) ─────────── */
-import LikeIcon from '../../images/icons/like icon.svg';
-import CommentIcon from '../../images/icons/comment icon.svg';
-import EditIcon from '../../images/icons/edit icon.svg';
-import DeleteIcon from '../../images/icons/delete icon.svg';
+import { rtdb, db as fsDb } from "../../configs/firebase";
+import { tryNotify } from "../../configs/notifications";
+import { likeComment } from "../../configs/useArticles";
 
+import "../../styles/auth_header.css";
 
+/* ─────────── ICON ASSETS ─────────── */
+import LikeIcon from "../../images/icons/like icon.svg";
+import CommentIcon from "../../images/icons/comment icon.svg";
+import EditIcon from "../../images/icons/edit icon.svg";
+import DeleteIcon from "../../images/icons/delete icon.svg";
+
+const COMMENTS_LIMIT = 30;
 
 export default function CommentList({ articleId, currentUser }) {
-  const uid       = currentUser?.uid;
+  const uid = currentUser?.uid;
   const avatarUrl = currentUser?.photoURL || null;
 
-  const [tree,    setTree]    = useState([]);
-  const [likes,   setLikes]   = useState({});
-  const [draft,   setDraft]   = useState("");
+  const [tree, setTree] = useState([]);
+  const [likes, setLikes] = useState({});
+  const [draft, setDraft] = useState("");
   const [slugMap, setSlugMap] = useState({});
-  const [mySlug,  setMySlug]  = useState(null);
+  const [mySlug, setMySlug] = useState(null);
+  const [likePendingMap, setLikePendingMap] = useState({});
+  const [commentPending, setCommentPending] = useState(false);
 
   const bottomRef = useRef(null);
-  const cPath     = cid => `comments/${articleId}/${cid}`;
+  const slugMapRef = useRef({});
+
+  const cPath = (cid) => `comments/${articleId}/${cid}`;
   const counterRef = ref(rtdb, `articles/${articleId}/commentsCount`);
 
-  // subscribe to comment likes per comment/reply
   useEffect(() => {
-    if (!articleId) return;
-    // const unsub = streamCommentLikes(articleId, setLikes);
-    // const unsub = streamCommentLikes(articleId, newMap =>
-    //   setLikes(prev => ({ ...prev, ...newMap }))
-    // );
-    const unsub = streamCommentLikes(articleId, setLikes);
-    return () => unsub?.();
-  }, [articleId]);
+    slugMapRef.current = slugMap;
+  }, [slugMap]);
 
-  /* fetch my slug */
+  /* ─────────── fetch my slug once ─────────── */
   useEffect(() => {
     if (!uid) return;
-    (async () => {
+
+    let alive = true;
+
+    async function loadMySlug() {
       try {
         const snap = await getDoc(doc(fsDb, "users", uid));
-        if (snap.exists()) setMySlug(snap.data().username || uid);
-      } catch {}
-    })();
+        if (alive && snap.exists()) {
+          setMySlug(snap.data().username || uid);
+        }
+      } catch (err) {
+        console.error("loadMySlug:", err);
+      }
+    }
+
+    loadMySlug();
+
+    return () => {
+      alive = false;
+    };
   }, [uid]);
 
-  // build tree structure
+  /*
+   * Phase 3 improvement:
+   * One limited realtime listener for latest comments only.
+   * Also derives likes map from the same snapshot, so we do not need
+   * a second full streamCommentLikes listener.
+   */
   useEffect(() => {
-    if (!articleId) return;
-    const unsub = onValue(ref(rtdb, `comments/${articleId}`), async snap => {
+    if (!articleId) return () => {};
+
+    const commentsQuery = query(
+      ref(rtdb, `comments/${articleId}`),
+      orderByChild("createdAt"),
+      limitToLast(COMMENTS_LIMIT)
+    );
+
+    const unsub = onValue(commentsQuery, async (snap) => {
       const map = {};
+      const nextLikes = {};
       const uidsToFetch = new Set();
 
-      snap.forEach(c => {
-        const n = { id: c.key, ...c.val(), children: [] };
-        map[n.id] = n;
-        if (!slugMap[n.uid]) uidsToFetch.add(n.uid);
+      snap.forEach((commentSnap) => {
+        const comment = {
+          id: commentSnap.key,
+          ...commentSnap.val(),
+          children: [],
+        };
+
+        map[comment.id] = comment;
+
+        if (comment.uid && !slugMapRef.current[comment.uid]) {
+          uidsToFetch.add(comment.uid);
+        }
+
+        const likedUids = [];
+        commentSnap.child("likedBy").forEach((userSnap) => {
+          likedUids.push(userSnap.key);
+        });
+
+        nextLikes[comment.id] = likedUids;
       });
 
       if (uidsToFetch.size) {
         const fetched = await Promise.all(
-          [...uidsToFetch].map(async id => {
+          [...uidsToFetch].map(async (id) => {
             try {
-              const s = await getDoc(doc(fsDb, "users", id));
-              return [id, s.exists() ? s.data().username || id : id];
+              const userSnap = await getDoc(doc(fsDb, "users", id));
+              return [id, userSnap.exists() ? userSnap.data().username || id : id];
             } catch {
               return [id, id];
             }
           })
         );
-        setSlugMap(prev => ({ ...prev, ...Object.fromEntries(fetched) }));
+
+        setSlugMap((prev) => ({
+          ...prev,
+          ...Object.fromEntries(fetched),
+        }));
       }
 
       const roots = [];
-      Object.values(map).forEach(n => {
-        if (n.parentId && map[n.parentId]) map[n.parentId].children.push(n);
-        else roots.push(n);
+
+      Object.values(map).forEach((node) => {
+        if (node.parentId && map[node.parentId]) {
+          map[node.parentId].children.push(node);
+        } else {
+          roots.push(node);
+        }
       });
 
-      setTree(roots);
-      // setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
-    });
-    return () => unsub();
-  }, [articleId, slugMap]);
+      roots.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
-  const incrementCounter = delta =>
-    runTransaction(counterRef, cur => Math.max((cur || 0) + delta, 0));
+      roots.forEach((root) => {
+        root.children?.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      });
+
+      setLikes(nextLikes);
+      setTree(roots);
+    });
+
+    return () => unsub();
+  }, [articleId]);
+
+  const incrementCounter = (delta) =>
+    runTransaction(counterRef, (cur) => Math.max((cur || 0) + delta, 0));
 
   const addComment = async (text, parentId = null) => {
-    if (!uid || !text.trim()) return;
-    let slug = mySlug;
-    if (!slug) {
-      try {
-        const s = await getDoc(doc(fsDb, "users", uid));
-        slug = s.exists() ? s.data().username || uid : uid;
-        setMySlug(slug);
-      } catch {
-        slug = uid;
+    if (!uid || !text.trim() || commentPending) return;
+
+    try {
+      setCommentPending(true);
+
+      let slug = mySlug;
+
+      if (!slug) {
+        try {
+          const userSnap = await getDoc(doc(fsDb, "users", uid));
+          slug = userSnap.exists() ? userSnap.data().username || uid : uid;
+          setMySlug(slug);
+        } catch {
+          slug = uid;
+        }
       }
-    }
-    const newRef = push(ref(rtdb, `comments/${articleId}`));
-    await set(newRef, {
-      uid,
-      username: slug,
-      avatarUrl,
-      text: text.trim(),
-      parentId,
-      createdAt: Date.now(),
-    });
-    await incrementCounter(1);
-    const artSnap = await rtdbGet(rtdbRef(rtdb, `articles/${articleId}`));
+
+      const newRef = push(ref(rtdb, `comments/${articleId}`));
+
+      await set(newRef, {
+        uid,
+        username: slug,
+        avatarUrl,
+        text: text.trim(),
+        parentId,
+        createdAt: Date.now(),
+      });
+
+      await incrementCounter(1);
+
+      const artSnap = await get(ref(rtdb, `articles/${articleId}`));
       const article = artSnap.val();
+
       if (article && article.authorId !== uid) {
         const actorSnap = await getDoc(doc(fsDb, "users", uid));
-        const actor    = actorSnap.exists() ? actorSnap.data() : {};
+        const actor = actorSnap.exists() ? actorSnap.data() : {};
+
         await tryNotify(article.authorId, {
           type: "comment",
-          actorId:   uid,
+          actorId: uid,
           actorName:
             actor.username ||
             [actor.firstName, actor.lastName].filter(Boolean).join(" ") ||
@@ -1917,141 +2492,84 @@ export default function CommentList({ articleId, currentUser }) {
           articleTitle: article.title || "",
         });
       }
+    } catch (err) {
+      console.error("addComment:", err);
+    } finally {
+      setCommentPending(false);
+    }
   };
 
-  const deleteComment = async id => {
+  const deleteComment = async (id) => {
     await remove(ref(rtdb, cPath(id)));
     await incrementCounter(-1);
   };
 
-  // const toggleLike = async id => {
-  //   if (!uid) return;
-  //   await likeComment(articleId, id, uid);
-  // };
+  const toggleLike = async (id) => {
+    if (!uid || likePendingMap[id]) return;
 
-  const toggleLike = async id => {
-        if (!uid) return;
-    
-        /* optimistic local update */
-        setLikes(prev => {
-          const arr = prev[id] || [];
-          const nextArr = arr.includes(uid)
-            ? arr.filter(x => x !== uid)
-            : [...arr, uid];
-          return { ...prev, [id]: nextArr };
-        });
-    
-        try {
-          await likeComment(articleId, id, uid);         // RTDB write + notification
-        } catch (err) {
-          console.error(err);
-          /* roll-back if the write failed */
-          setLikes(prev => {
-            const arr = prev[id] || [];
-            const nextArr = arr.includes(uid)
-              ? arr.filter(x => x !== uid)
-              : [...arr, uid];
-            return { ...prev, [id]: nextArr };
-          });
-        }
-      };
+    setLikePendingMap((prev) => ({ ...prev, [id]: true }));
+
+    setLikes((prev) => {
+      const arr = prev[id] || [];
+      const nextArr = arr.includes(uid)
+        ? arr.filter((x) => x !== uid)
+        : [...arr, uid];
+
+      return { ...prev, [id]: nextArr };
+    });
+
+    try {
+      await likeComment(articleId, id, uid);
+    } catch (err) {
+      console.error("toggleLike:", err);
+
+      setLikes((prev) => {
+        const arr = prev[id] || [];
+        const nextArr = arr.includes(uid)
+          ? arr.filter((x) => x !== uid)
+          : [...arr, uid];
+
+        return { ...prev, [id]: nextArr };
+      });
+    } finally {
+      setLikePendingMap((prev) => ({ ...prev, [id]: false }));
+    }
+  };
 
   const saveEdit = async (id, text) => {
     if (!text.trim()) return;
-    await update(ref(rtdb, cPath(id)), { text: text.trim(), updatedAt: Date.now() });
+
+    await update(ref(rtdb, cPath(id)), {
+      text: text.trim(),
+      updatedAt: Date.now(),
+    });
   };
 
   const Meta = ({ c }) => (
     <small className="text-muted">
       {new Date(c.createdAt).toLocaleDateString()}
-      {c.updatedAt && <> · edited {new Date(c.updatedAt).toLocaleTimeString()}</>}
+      {c.updatedAt && (
+        <> · edited {new Date(c.updatedAt).toLocaleTimeString()}</>
+      )}
     </small>
   );
 
   const Node = ({ node, depth }) => {
-    const mine  = uid === node.uid;
+    const mine = uid === node.uid;
     const liked = (likes[node.id] || []).includes(uid);
-    const slug  = node.username || slugMap[node.uid] || node.uid;
-    const link  = mine ? "/profile" : `/u/${slug}`;
+    const slug = node.username || slugMap[node.uid] || node.uid;
+    const link = mine ? "/profile" : `/u/${slug}`;
+    const pendingLike = !!likePendingMap[node.id];
 
     const [editing, setEditing] = useState(false);
-    const [eDraft, setEDraft]   = useState(node.text);
-    const [open, setOpen]       = useState(false);
-    const [rDraft, setRDraft]   = useState("");
+    const [eDraft, setEDraft] = useState(node.text);
+    const [open, setOpen] = useState(false);
+    const [rDraft, setRDraft] = useState("");
+
     const repliesCount = node.children?.length || 0;
 
-    // return (
-    //   <li className="mb-3" style={{ marginLeft: depth * 24 }}>
-    //     <div className="d-flex gap-3">
-    //       <Link to={link} className="flex-shrink-0">
-    //         <img src={node.avatarUrl || "https://placehold.co/32x32"} width="32" height="32" className="rounded-circle" />
-    //       </Link>
-    //       <div className="flex-grow-1">
-    //         <div className="d-flex justify-content-between">
-    //           <Link to={link} className="fw-semibold text-reset" style={{ textDecoration: "none" }}>
-    //             {slug}
-    //           </Link>
-    //           <Meta c={node} />
-    //         </div>
-
-    //         {editing ? (
-    //           <MDBInputGroup className="my-2">
-    //             <input className="form-control" value={eDraft} onChange={e => setEDraft(e.target.value)} />
-    //             <MDBBtn type="button" size="sm" onClick={() => { saveEdit(node.id, eDraft); setEditing(false); }}>Save</MDBBtn>
-    //             <MDBBtn type="button" size="sm" color="link" onClick={() => setEditing(false)}>Cancel</MDBBtn>
-    //           </MDBInputGroup>
-    //         ) : (
-    //           <p className="mb-1">{node.text}</p>
-    //         )}
-
-    //         <div className="d-flex gap-3 small text-muted">
-    //           <span onClick={() => uid && toggleLike(node.id)} style={{ cursor: uid ? 'pointer' : 'not-allowed', opacity: uid ? 1 : 0.5 }}>
-    //             <MDBIcon fas={liked} far={!liked} icon="thumbs-up" className="me-1" />
-    //             {(likes[node.id] || []).length}
-    //           </span>
-    //           {uid && (
-    //             <span onClick={() => setOpen(o => !o)} style={{ cursor: 'pointer' }}>
-    //               <MDBIcon far icon="reply" className="me-1" /> Reply
-    //             </span>
-    //           )}
-    //           {mine && !editing && (
-    //             <>  
-    //               <span onClick={() => setEditing(true)} style={{ cursor: 'pointer' }}>
-    //                 <MDBIcon fas icon="edit" className="me-1" />Edit
-    //               </span>
-    //               <span onClick={() => deleteComment(node.id)} style={{ cursor: 'pointer' }}>
-    //                 <MDBIcon fas icon="trash-alt" className="me-1 text-danger" />Delete
-    //               </span>
-    //             </>
-    //           )}
-    //         </div>
-
-    //         {open && uid && (
-    //           <MDBInputGroup className="mt-3">
-    //             <input
-    //               className="form-control"
-    //               placeholder="Write a reply…"
-    //               value={rDraft}
-    //               onChange={e => setRDraft(e.target.value)}
-    //             />
-    //             <MDBBtn type="button" size="sm" onClick={() => { addComment(rDraft, node.id); setRDraft(""); setOpen(false); }}>
-    //               Reply
-    //             </MDBBtn>
-    //           </MDBInputGroup>
-    //         )}
-    //       </div>
-    //     </div>
-
-    //     {node.children?.length > 0 && (
-    //       <ul className="list-unstyled mt-3">
-    //         {node.children.map(ch => <Node key={ch.id} node={ch} depth={depth + 1} />)}
-    //       </ul>
-    //     )}
-    //   </li>
-    // );
-  
     return (
-      <li className={`comment-item depth-${depth}`} >
+      <li className={`comment-item depth-${depth}`}>
         <div className="d-flex gap-3">
           <Link to={link} className="flex-shrink-0">
             <img
@@ -2059,218 +2577,218 @@ export default function CommentList({ articleId, currentUser }) {
               width={depth === 0 ? 40 : 32}
               height={depth === 0 ? 40 : 32}
               className="rounded-circle comment-avatar"
+              alt={slug}
             />
           </Link>
 
           <div className="flex-grow-1">
-            {/* Header: name (bold) */}
             <div className="comment-header">
               <Link to={link} className="comment-author text-reset">
                 {slug}
               </Link>
-              {/* optional subline if you store it later */}
             </div>
 
-            {/* Body */}
-           {editing ? (
-  <div className="comment-composer my-2">
-    <input
-      className="form-control comment-input"
-      value={eDraft}
-      placeholder="Edit your comment…"
-      onChange={e => setEDraft(e.target.value)}
-      onKeyDown={e => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          saveEdit(node.id, eDraft); setEditing(false);
-        }
-      }}
-    />
-    <button
-      type="button"
-      className="btn-outline-gold-solid"
-      onClick={() => { saveEdit(node.id, eDraft); setEditing(false); }}
-    >
-      Save
-    </button>
-    <button
-      type="button"
-      className="btn-cancel-link"
-      onClick={() => setEditing(false)}
-    >
-      Cancel
-    </button>
-  </div>
-) : (
-  <p className="comment-text mb-0">{node.text}</p>
-)}
+            {editing ? (
+              <div className="comment-composer my-2">
+                <input
+                  className="form-control comment-input"
+                  value={eDraft}
+                  placeholder="Edit your comment…"
+                  onChange={(e) => setEDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      saveEdit(node.id, eDraft);
+                      setEditing(false);
+                    }
+                  }}
+                />
 
+                <button
+                  type="button"
+                  className="btn-outline-gold-solid"
+                  onClick={() => {
+                    saveEdit(node.id, eDraft);
+                    setEditing(false);
+                  }}
+                >
+                  Save
+                </button>
 
-            {/* Meta row exactly like the mock */}
+                <button
+                  type="button"
+                  className="btn-cancel-link"
+                  onClick={() => setEditing(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <p className="comment-text mb-0">{node.text}</p>
+            )}
+
             <div className="comment-meta">
               <Meta c={node} />
 
               <span
                 type="button"
                 className="action like"
-                onClick={() => uid && toggleLike(node.id)}
-                // style={{ cursor: uid ? 'pointer' : 'not-allowed', opacity: uid ? 1 : 0.5 }}
+                onClick={() => uid && !pendingLike && toggleLike(node.id)}
                 title={liked ? "Unlike" : "Like"}
+                style={{
+                  cursor: uid ? "pointer" : "not-allowed",
+                  pointerEvents: pendingLike ? "none" : "auto",
+                  opacity: pendingLike ? 0.7 : uid ? 1 : 0.5,
+                }}
               >
-                {/* <MDBIcon icon="thumbs-up" fas={liked} far={!liked} /> */}
                 <img
                   src={LikeIcon}
                   alt=""
                   className="comment-action-icon"
-                  style={{ width: 18, height: 18, objectFit: 'contain' }}
+                  style={{ width: 18, height: 18, objectFit: "contain" }}
                 />
                 {(likes[node.id] || []).length}
               </span>
 
               <span
                 className="action reply"
-                onClick={() => uid && setOpen(o => !o)}
-                style={{ cursor: uid ? 'pointer' : 'not-allowed', opacity: uid ? 1 : 0.5 }}
+                onClick={() => uid && setOpen((o) => !o)}
+                style={{
+                  cursor: uid ? "pointer" : "not-allowed",
+                  opacity: uid ? 1 : 0.5,
+                }}
                 title="Reply"
               >
-                {/* <MDBIcon far icon="comment" /> */}
                 <img
                   src={CommentIcon}
                   alt=""
                   className="comment-action-icon"
-                  style={{ width: 18, height: 18, objectFit: 'contain' }}
+                  style={{ width: 18, height: 18, objectFit: "contain" }}
                 />
                 {repliesCount === 1 ? "1 reply" : `${repliesCount} replies`}
               </span>
 
               {mine && !editing && (
                 <>
-                  <span className="action edit" onClick={() => setEditing(true)} title="Edit">
-                    {/* <MDBIcon fas icon="pen" /> */}
+                  <span
+                    className="action edit"
+                    onClick={() => setEditing(true)}
+                    title="Edit"
+                  >
                     <img
                       src={EditIcon}
                       alt=""
                       className="comment-action-icon"
-                      style={{ width: 18, height: 18, objectFit: 'contain' }}
+                      style={{ width: 18, height: 18, objectFit: "contain" }}
                     />
                     edit
                   </span>
-                  <span className="action delete" onClick={() => deleteComment(node.id)} title="Delete">
+
+                  <span
+                    className="action delete"
+                    onClick={() => deleteComment(node.id)}
+                    title="Delete"
+                  >
                     <img
                       src={DeleteIcon}
                       alt=""
                       className="comment-action-icon"
-                      style={{ width: 18, height: 18, objectFit: 'contain' }}
+                      style={{ width: 18, height: 18, objectFit: "contain" }}
                     />
-                    {/* <MDBIcon fas icon="trash-alt" /> */}
                     delete
                   </span>
                 </>
               )}
             </div>
 
-            {/* Inline reply composer */}
-           {open && uid && (
+            {open && uid && (
               <div className="comment-composer mt-3">
                 <input
                   className="form-control comment-input"
                   placeholder="Write a reply…"
                   value={rDraft}
-                  onChange={e => setRDraft(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                  onChange={(e) => setRDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      addComment(rDraft, node.id); setRDraft(""); setOpen(false);
+                      addComment(rDraft, node.id);
+                      setRDraft("");
+                      setOpen(false);
                     }
                   }}
                 />
+
                 <button
                   type="button"
                   className="btn-outline-gold-solid"
-                  onClick={() => { addComment(rDraft, node.id); setRDraft(""); setOpen(false); }}
+                  disabled={commentPending}
+                  onClick={() => {
+                    addComment(rDraft, node.id);
+                    setRDraft("");
+                    setOpen(false);
+                  }}
                 >
                   Reply
                 </button>
               </div>
             )}
           </div>
-     
-          
         </div>
 
-        {/* Replies with thread line */}
         {node.children?.length > 0 && (
           <ul className="comment-children list-unstyled">
-            {node.children.map(ch => <Node key={ch.id} node={ch} depth={depth + 1} />)}
+            {node.children.map((child) => (
+              <Node key={child.id} node={child} depth={depth + 1} />
+            ))}
           </ul>
         )}
       </li>
     );
   };
 
-  
-
-  // return (
-  //   <div>
-  //     {uid ? (
-  //       <MDBInputGroup className="comment-composer mb-4">
-  //         <textarea rows={2} className="form-control comment-input" value={draft} onChange={e => setDraft(e.target.value)} 
-  //         onKeyDown={e => {
-  //             if (e.key === 'Enter' && !e.shiftKey) {
-  //               e.preventDefault();
-  //               addComment(draft); setDraft("");
-  //             }
-  //           }}
-  //           placeholder="Help extend the article with your comments" />
-  //         <MDBBtn type="button"  className="btn-outline-gold btn-48" onClick={() => { addComment(draft); setDraft(""); }}>Comment</MDBBtn>
-  //       </MDBInputGroup>
-  //     ) : (
-  //       <p className="text-muted fst-italic mb-4">Please log in to post comments.</p>
-  //     )}
-
-  //     <ul className="list-unstyled">
-  //       {tree.map(n => <Node key={n.id} node={n} depth={0} />)}
-  //       <li ref={bottomRef} />
-  //     </ul>
-  //   </div>
-  // );
-
- return (
+  return (
     <div>
       {uid ? (
-        /* ==== Composer redesigned to match the mock ==== */
         <div className="comment-composer mb-4">
           <input
             className="form-control comment-input"
             type="text"
             placeholder="Help extend the article with your comments"
             value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                addComment(draft); setDraft("");
+                addComment(draft);
+                setDraft("");
               }
             }}
           />
+
           <button
             type="button"
             className="btn-outline-gold-solid"
-            onClick={() => { addComment(draft); setDraft(""); }}
+            disabled={commentPending}
+            onClick={() => {
+              addComment(draft);
+              setDraft("");
+            }}
           >
-            Comment
+            {commentPending ? "Posting..." : "Comment"}
           </button>
         </div>
       ) : (
-        <p className="text-muted fst-italic mb-4">Please log in to post comments.</p>
+        <p className="text-muted fst-italic mb-4">
+          Please log in to post comments.
+        </p>
       )}
 
       <ul className="list-unstyled">
-        {tree.map(n => <Node key={n.id} node={n} depth={0} />)}
+        {tree.map((node) => (
+          <Node key={node.id} node={node} depth={0} />
+        ))}
         <li ref={bottomRef} />
       </ul>
     </div>
   );
-
-
 }

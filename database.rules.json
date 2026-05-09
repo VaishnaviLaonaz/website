@@ -1,8 +1,8 @@
 {
   "rules": {
     "articles": {
-      ".read" : true,                
-".write": "auth != null" ,
+      ".read": true,
+      ".write": "auth != null",
       ".indexOn": ["authorId", "createdAt"],
 
       "$articleId": {
@@ -10,13 +10,12 @@
           ".read": "auth != null",
           "$uid": {
             ".write": "auth != null && auth.uid === $uid"
-           
           }
         },
 
         "likesCount": {
-          ".read"    : true,
-          ".write"   : "auth != null",
+          ".read": true,
+          ".write": "auth != null",
           ".validate": "newData.isNumber() && newData.val() >= 0"
         },
 
@@ -24,15 +23,22 @@
           ".read": "auth != null",
           "$uid": {
             ".write": "auth != null && auth.uid === $uid"
-          
           }
         },
 
         "bookmarksCount": {
-          ".read"    : true,
-          ".write"   : "auth != null",
+          ".read": true,
+          ".write": "auth != null",
           ".validate": "newData.isNumber() && newData.val() >= 0"
         }
+      }
+    },
+
+    "drafts": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".indexOn": ["createdAt"]
       }
     },
 
@@ -40,7 +46,7 @@
       "$articleId": {
         "$commentId": {
           "$uid": {
-            ".read" : "auth != null",
+            ".read": "auth != null",
             ".write": "auth != null && auth.uid === $uid",
             ".validate": "newData.val() === true"
           }
@@ -50,21 +56,27 @@
 
     "userBookmarks": {
       "$uid": {
-        ".read" : "auth != null && auth.uid === $uid",
+        ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid"
       }
     },
 
     "comments": {
       "$articleId": {
-        ".read"    : true,
-        ".write"   : "auth != null",
-        ".indexOn" : ["createdAt"],
+        ".read": true,
+        ".write": "auth != null",
+        ".indexOn": ["createdAt"],
 
         "$commentId": {
           ".validate": "newData.hasChildren(['uid','username','text','createdAt'])",
-          ".write"   : "auth != null && (!data.exists() || data.child('uid').val() === auth.uid)"
+          ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid)"
         }
+      }
+    },
+      "articleBodies": {
+      "$articleId": {
+      ".read": true,
+      ".write": "auth != null"
       }
     },
 
@@ -74,27 +86,27 @@
 
         "followers": {
           "$actorUid": {
-            ".write"   : "auth != null && auth.uid === $actorUid",
+            ".write": "auth != null && auth.uid === $actorUid",
             ".validate": "newData.val() === true"
           }
         },
 
         "following": {
           "$targetUid": {
-            ".write"   : "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid",
             ".validate": "newData.val() === true"
           }
         },
 
         "followersCount": {
-          ".read"    : true,
-          ".write"   : "auth != null",
+          ".read": true,
+          ".write": "auth != null",
           ".validate": "newData.isNumber() && newData.val() >= 0"
         },
 
         "followingCount": {
-          ".read"    : true,
-          ".write"   : "auth != null",
+          ".read": true,
+          ".write": "auth != null",
           ".validate": "newData.isNumber() && newData.val() >= 0"
         }
       }

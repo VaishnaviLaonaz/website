@@ -1966,41 +1966,1151 @@
 // }
 
 
+//nelow code is workig before cost cutting
+
+// // src/pages/ArticleDetailPage.jsx
+// import React, { useEffect, useState, useRef, useMemo } from "react";
+// import {
+//   MDBContainer, MDBRow, MDBCol, MDBCard, MDBCardBody,
+//   MDBIcon, MDBSpinner, MDBBadge
+// } from "mdb-react-ui-kit";
+// import { useParams, Link } from "react-router-dom";
+// import { getDatabase, ref as rdbRef, get as rdbGet } from "firebase/database";
+// import { doc, getDoc } from "firebase/firestore";
+
+// import { auth, db as fsDb } from "../../configs/firebase";
+// import { useAuth } from "../../context/AuthContext";
+// import {
+//   streamViews, incrementView,
+//   toggleBookmark, streamBookmarks,
+//   likeArticle, streamLikes,
+//   streamCommentCount, useArticles,
+// } from "../../configs/useArticles";
+
+// import CommentList from "../../components/cards/CommentList";
+// import ArticleCard from "../../components/cards/ArticleCard";
+// import DOMPurify from "dompurify";
+
+
+// /* ─────────── ICON ASSETS (your SVGs) ─────────── */
+// import ViewIcon from '../../images/icons/View Icon.svg';
+// import CommentIcon from '../../images/icons/comment icon.svg';
+// import EditIcon from '../../images/icons/edit icon.svg';
+// import DeleteIcon from '../../images/icons/delete icon.svg';
+// import LikeIcon from '../../images/icons/like icon.svg';
+
+
+// import '../../styles/ArticleDetailsPage.css';
+
+// export default function ArticleDetailPage() {
+//   const { articleId } = useParams();
+//   const { currentUser } = useAuth();
+//   const uid = currentUser?.uid;
+
+//   /* ── keep URL clean + jump to top ── */
+//   useEffect(() => {
+//     if (window.location.hash) {
+//       window.history.replaceState(null, document.title, window.location.pathname);
+//     }
+//     window.scrollTo({ top: 0, behavior: "auto" });
+//   }, [articleId]);
+
+//   const allArticles = useArticles(50) ?? [];
+
+//   /* ── local state ── */
+//   const [article, setArticle] = useState(null);
+//   const [author, setAuthor] = useState(null);
+//   const [loading, setLoading] = useState(true);
+
+//   const [views, setViews] = useState(0);
+//   const [likes, setLikes] = useState([]);
+//   const [bookmarks, setBookmarks] = useState([]);
+//   const [commentCnt, setCommentCnt] = useState(0);
+
+//   const [authorMap, setAuthorMap] = useState({});
+//   const listEndRef = useRef(null);
+
+//   const safeBodyHTML = useMemo(() => {
+//     return DOMPurify.sanitize(article?.body  || "", {
+//       ADD_ATTR: ["data-size", "class"], // keep our image sizing + class hooks
+//     });
+//   }, [article?.body]);
+
+
+//   /* ── 1. first fetch ── */
+//   useEffect(() => {
+//     (async () => {
+//       try {
+//         const snap = await rdbGet(rdbRef(getDatabase(), `articles/${articleId}`));
+//         if (!snap.exists()) return setLoading(false);
+
+//         const data = snap.val();
+//         setArticle({ id: articleId, ...data });
+
+//         const aSnap = await getDoc(doc(fsDb, "users", data.authorId));
+//         aSnap.exists() && setAuthor(aSnap.data());
+//       } catch (e) {
+//         console.error(e);
+//       } finally {
+//         setLoading(false);
+//       }
+//     })();
+//   }, [articleId]);
+
+
+  
+
+//   /* ── 2. live counters ── */
+//   useEffect(() => {
+//     if (!articleId) return;
+//     const u1 = streamViews(articleId, (v) => setViews(v || 0));
+//     const u2 = streamLikes(articleId, setLikes);
+//     const u3 = streamBookmarks(articleId, setBookmarks);
+//     const u4 = streamCommentCount(articleId, setCommentCnt);
+//     return () => {
+//       u1();
+//       u2();
+//       u3();
+//       u4();
+//     };
+//   }, [articleId]);
+
+//   /* ── 3. unique-ish view (time-on-page) ── */
+//   useEffect(() => {
+//     if (!articleId) return;
+//     const timer = setTimeout(() => {
+//       incrementView(articleId);
+//     }, 10000);
+//     return () => clearTimeout(timer);
+//   }, [articleId]);
+
+//   /* ── 4. rec/related lists & author cache ── */
+//   const rec = allArticles.filter((a) => a.id !== articleId).slice(0, 4);
+//   const related = allArticles
+//     .filter((a) => a.category === article?.category && a.id !== articleId)
+//     .slice(0, 4);
+
+//   useEffect(() => {
+//     const need = new Set([...rec, ...related].map((a) => a.authorId));
+//     const miss = [...need].filter((id) => id && !authorMap[id]);
+//     if (!miss.length) return;
+
+//     (async () => {
+//       const pairs = await Promise.all(
+//         miss.map(async (id) => {
+//           const s = await getDoc(doc(fsDb, "users", id));
+//           return [id, s.exists() ? { uid: id, ...s.data() } : null];
+//         })
+//       );
+//       setAuthorMap((p) => ({ ...p, ...Object.fromEntries(pairs) }));
+//     })();
+//   }, [rec, related, authorMap]);
+
+  
+
+//   /* ── guards ── */
+//   if (loading) return <MDBSpinner className="d-block mx-auto my-5" />;
+//   if (!article) return <p className="text-center my-5">Article not found.</p>;
+
+//   /* ── helpers ── */
+//   // const created = new Date(article.createdAt).toLocaleDateString();
+//   // const updated = new Date(article.updatedAt).toLocaleDateString();
+//   // const edited = article.updatedAt !== article.createdAt;
+
+//   const formatDate = (d) =>
+//   new Date(d).toLocaleDateString("en-US", {
+//     month: "long",
+//     day: "2-digit",
+//     year: "numeric",
+//   });
+
+//   const created = formatDate(article.createdAt);
+//   const updated = formatDate(article.updatedAt);
+//   const edited  = article.updatedAt !== article.createdAt;
+
+//   const liked = uid ? likes.includes(uid) : false;
+//   const marked = uid ? bookmarks.includes(uid) : false;
+//   const doLike = () => uid && likeArticle(articleId, uid);
+//   const doMark = () => uid && toggleBookmark(articleId, uid);
+
+ 
+
+//   const fullName =
+//     author?.username ||
+//     author?.displayName ||
+//     `${author?.firstName || ""} ${author?.lastName || ""}`.trim() ||
+//     "Unknown author";
+
+    
+//   /* ── design palette from your system ── */
+//   const C = {
+//     pageBg: 'var(--clr-field-mist)',
+//     text: "#0A0A0A",
+//     accent: "#5C6B3C",
+//     muted: "#6B6B6B",
+//     border: "#D6D9C6",
+//     tagBg: "#E7ECD6",
+//   };
+
+  
+
+//   /* ────── UI ────── */
+//   return (
+//     <MDBContainer fluid="lg" className="py-5" style={{background: 'var(--clr-field-mist)'}}>
+//       <MDBRow className="justify-content-center">
+//         <MDBCol lg="8">
+//           {/* ====== TOP CARD (Hero + Header) ====== */}
+//           <MDBCard className="border-0 shadow-0 mb-5" style={{ background: C.pageBg, borderRadius: 24 }}>
+//             {/* Hero image (show the whole image, no crop) */}
+//             {/* <div
+//               style={{
+//                 width: "100%",
+//                 background: C.pageBg,
+//                 borderTopLeftRadius: 24,
+//                 borderTopRightRadius: 24,
+//                 overflow: "hidden",
+//               }}
+//             > */}
+//               {/* <div
+//                 style={{
+//                   width: "100%",
+//                   aspectRatio: "16 / 9",
+//                   display: "flex",
+//                   alignItems: "center",
+//                   justifyContent: "center",
+//                 }}
+//               > */}
+//                 {/* <img
+//                   src={article.coverUrl || "https://placehold.co/1200x675?text=No+Image"}
+//                   alt={article.title}
+//                   style={{
+//                     maxWidth: "100%",
+//                     maxHeight: "100%",
+//                     width: "100%",
+//                     height: "100%",
+//                     objectFit: "contain", // ← show entire image in frame
+//                   }}
+//                 /> */}
+//               {/* </div> */}
+//             {/* </div> */}
+
+//             {/* <MDBCardBody className="px-md-5 px-3 py-4">
+//             <MDBRow className="g-5 flex-column flex-md-row align-items-stretch">               
+//                 <MDBCol md="8" className="order-2 order-md-1 d-flex flex-column">
+//                   <h1
+//                     className="fw-bold mb-7"
+//                     style={{ lineHeight: 1.2, fontSize: "2.4rem", color: C.text }}
+//                   >
+//                     {article.title}
+//                   </h1>
+
+//                   {Array.isArray(article.tags) && article.tags.length > 0 && (
+//                     <div className="d-flex flex-wrap gap-2 mb-4">
+//                       {article.tags.map((t) => (
+//                          <span
+//                       key={t}
+//                       style={{
+//                         fontFamily: 'Poppins, sans-serif',
+//                         fontWeight: 600,          
+//                         fontSize: '14px',
+//                         lineHeight: '150%',
+//                         letterSpacing: '0px',
+//                         color: '#5C6B3C',
+//                       }}
+//                     >
+//                       #{t}
+//                     </span>
+//                       ))}
+//                     </div>
+//                   )}
+
+//                   <div
+//                     className="d-flex align-items-center flex-wrap gap-4 small"
+//                     style={{ color: C.muted }}
+//                   >
+//                     <span>{edited ? `Updated ${updated}` : created}</span>
+
+                   
+
+//                     <span className="d-inline-flex align-items-center">
+//                       <MDBIcon far icon="eye" className="me-2" />
+//                       {views}
+//                     </span>
+
+//                     <button
+//                       type="button"
+//                       onClick={doLike}
+//                       className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center"
+//                       style={{ color: liked ? C.accent : C.muted }}
+//                     >
+//                       <MDBIcon icon="thumbs-up" fas={liked} far={!liked} className="me-2" />
+//                       {likes.length}
+//                     </button>
+
+//                     <span className="d-inline-flex align-items-center">
+//                       <MDBIcon far icon="comment" className="me-2" />
+//                       {commentCnt}
+//                     </span>
+
+//                     <span className="d-inline-flex align-items-center" role="button" title="Share">
+//                       <MDBIcon far icon="share-square" />
+//                     </span>
+
+//                     <button
+//                       type="button"
+//                       onClick={doMark}
+//                       className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center"
+//                       style={{ color: marked ? "#FFC107" : C.muted }}
+//                       title={marked ? "Bookmarked" : "Bookmark"}
+//                     >
+//                       <MDBIcon icon="star" fas={marked} far={!marked} />
+//                     </button>
+//                   </div>
+
+                 
+                  
+//                 </MDBCol>
+//                  <div
+//                   className="d-none d-md-block"
+//                   style={{
+//                     width: 2,
+//                     background: "#C9CEB6",
+//                     margin: "0 1.5rem",
+//                   }}
+//                 />
+               
+
+//                 <MDBCol
+//                   md="4"
+//                   className="order-1 order-md-2 d-flex justify-content-center justify-content-md-start"
+//                 >
+                  
+//                   <Link
+//                     to={author?.username ? `/u/${author.username}` : "/profile"}
+//                     className="ps-md-4 d-flex flex-column align-items-center align-items-md-start text-center text-md-start w-100"
+//                     style={{
+//                       textDecoration: "none",
+//                       color: "inherit",
+//                     }}
+//                   >
+//                     <img
+//                       src={author?.avatarUrl || currentUser?.photoURL || "https://placehold.co/160x160"}
+//                       alt={fullName}
+//                       className="rounded-circle mb-3"
+//                       width="96"
+//                       height="96"
+//                       style={{ objectFit: "cover" }}
+//                     />
+//                     <div className="fw-semibold">{fullName}</div>
+//                     {author?.tagline && (
+//                       <small className="text-muted">{author.tagline}</small>
+//                     )}
+//                   </Link>
+//                 </MDBCol>
+//               </MDBRow>
+
+//               <div
+//                 className="article-body mt-5 mb-4"
+//                 style={{
+//                   lineHeight: 1.8,
+//                   color: C.text,
+//                   fontSize: "1.02rem",
+//                 }}
+//                 dangerouslySetInnerHTML={{
+//                   __html: DOMPurify.sanitize(article.body),
+//                 }}
+//               />
+//             </MDBCardBody> */}
+//             <MDBCardBody className="article-card px-md-5 px-3 py-4">
+//   {/* ====== ARTICLE HEADER (title + meta + author side) ====== */}
+//   <MDBRow className="g-5 flex-column flex-md-row align-items-stretch article-head">
+//     {/* LEFT: Title + tags + meta */}
+//     <MDBCol md="8" className="order-2 order-md-1 d-flex flex-column">
+//       <h1 className="article-title mb-4">
+//         {article.title}
+//       </h1>
+
+//       {/* tags row */}
+//       {Array.isArray(article.tags) && article.tags.length > 0 && (
+//         <div className="d-flex flex-wrap gap-2 mb-4 article-tags">
+//           {article.tags.map((t) => (
+//             <span className="article-tag" key={t}>#{t}</span>
+//           ))}
+//         </div>
+//       )}
+
+//       {/* meta row with icons */}
+//       <div className="article-meta">
+//         <span>{edited ? `Updated ${updated}` : created}</span>
+
+//         <span className="d-inline-flex align-items-center">
+//           {/* <MDBIcon far  src={ViewIcon} className="meta-ico me-2" /> */}
+//            <img 
+//             src={ViewIcon}
+//             alt=""
+//             className="far meta-ico me-1"
+//             />
+//           {views}
+//         </span>
+
+//         <button
+//           type="button"
+//           onClick={doLike}
+//           className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center article-like"
+//         >
+//           {/* <MDBIcon icon="thumbs-up" fas={liked} far={!liked} className="meta-ico me-2" /> */}
+//           <img 
+//           // fas={liked} far={!liked}
+//             src={LikeIcon}
+//             alt=""
+//             className="meta-ico me-1"
+//                       />
+//           {likes.length}
+//         </button>
+
+//         <span className="d-inline-flex align-items-center">
+//           {/* <MDBIcon far icon="comment" className="meta-ico me-2" /> */}
+//           <img
+//             src={CommentIcon}
+//             alt=""
+//             className="far meta-ico me-1"
+//                       />
+//           {commentCnt}
+//         </span>
+
+//         <span className="d-inline-flex align-items-center" role="button" title="Share">
+//           <MDBIcon far icon="share-square" className="meta-ico-large" />
+//         </span>
+
+//         <button
+//           type="button"
+//           onClick={doMark}
+//           className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center article-bookmark"
+//           title={marked ? 'Bookmarked' : 'Bookmark'}
+//         >
+//           <MDBIcon icon="star" fas={marked} far={!marked} className="meta-ico meta-ico-large" />
+//         </button>
+//       </div>
+//     </MDBCol>
+
+//     {/* RIGHT: Author block with vertical divider */}
+//     <MDBCol
+//       md="4"
+//       className="order-1 order-md-2 d-flex justify-content-center justify-content-md-start position-relative author-col"
+//     >
+//       <Link
+//         to={author?.username ? `/u/${author.username}` : "/profile"}
+//         className="d-flex flex-column align-items-center align-items-md-start text-center text-md-start w-100 author-link"
+//       >
+//         <img
+//           src={author?.avatarUrl || "https://placehold.co/160x160"}
+//           alt={fullName}
+//           className="rounded-circle mb-5 author-avatar"
+//         />
+//         <div className="author-name">{fullName}</div>
+//         {author?.tagline && (
+//           <small className="author-role">{author.tagline}</small>
+//         )}
+//       </Link>
+//     </MDBCol>
+//   </MDBRow>
+
+//   {/* ====== ARTICLE BODY ====== */}
+//   <div
+//     className="article-body mt-5 mb-4"
+//     dangerouslySetInnerHTML={{
+//       __html: safeBodyHTML ,
+//     }}
+//   />
+// </MDBCardBody>
+
+//           </MDBCard>
+
+//            <div
+//             className="mt-5 mb-5"
+//             style={{ height: 1, background: C.border }}
+//             />
+
+//           {/* ====== COMMENTS ====== */}
+//           <div
+//             className="mb-4"
+//             // style={{
+//             //   background: "#FFFFFF",
+//             //   border: `1px solid ${C.border}`,
+//             //   borderRadius: 16,
+//             //   padding: "1.25rem",
+//             // }}
+//           >
+//             <div className="d-flex align-items-center justify-content-between mb-3">
+//               <h5 className="fw-bold m-0">Add your comment</h5>
+//               {/* <span
+//                 className="badge rounded-pill"
+//                 style={{ background: C.tagBg, color: C.accent, border: `1px solid ${C.border}` }}
+//               >
+//                 {commentCnt}
+//               </span> */}
+//             </div>
+
+//             {/* keep your existing component, just wrapped for visuals */}
+//             <CommentList articleId={articleId} currentUser={currentUser} />
+//             <div ref={listEndRef} />
+//           </div>
+
+//           {/* ====== RECOMMENDED ====== */}
+//           {rec.length > 0 && (
+//             <>
+//               <h5 className="fw-bold mt-4 mb-3">Recommended from LAONAZ</h5>
+//               <MDBRow className="g-4">
+//                 {rec.map((a) => (
+//                   <MDBCol md="6" key={a.id}>
+//                     <ArticleCard article={a} author={authorMap[a.authorId]} />
+//                   </MDBCol>
+//                 ))}
+//               </MDBRow>
+//             </>
+//           )}
+
+//           {/* ====== RELATED ====== */}
+//           {related.length > 0 && (
+//             <>
+//               <h5 className="fw-bold mt-5 mb-3">
+//                 More articles related to {article.category ? `#${article.category}` : "this topic"}
+//               </h5>
+//               <MDBRow className="g-4">
+//                 {related.map((a) => (
+//                   <MDBCol md="6" key={a.id}>
+//                     <ArticleCard article={a} author={authorMap[a.authorId]} />
+//                   </MDBCol>
+//                 ))}
+//               </MDBRow>
+//             </>
+//           )}
+//         </MDBCol>
+//       </MDBRow>
+//     </MDBContainer>
+//   );
+// }
+
+
+//above code is working before cost cutting
+
+//below is 1st cost cutting file
+
+// // src/pages/ArticleDetailPage.jsx
+// import React, { useEffect, useState, useRef, useMemo } from "react";
+// import {
+//   MDBContainer,
+//   MDBRow,
+//   MDBCol,
+//   MDBCard,
+//   MDBCardBody,
+//   MDBIcon,
+//   MDBSpinner,
+// } from "mdb-react-ui-kit";
+// import { useParams, Link } from "react-router-dom";
+// import { getDatabase, ref as rdbRef, get as rdbGet } from "firebase/database";
+// import { doc, getDoc } from "firebase/firestore";
+
+// import { db as fsDb } from "../../configs/firebase";
+// import { useAuth } from "../../context/AuthContext";
+// import {
+//   streamViews,
+//   incrementView,
+//   toggleBookmark,
+//   streamBookmarks,
+//   likeArticle,
+//   streamLikes,
+//   streamCommentCount,
+//   useArticles,
+// } from "../../configs/useArticles";
+
+// import CommentList from "../../components/cards/CommentList";
+// import ArticleCard from "../../components/cards/ArticleCard";
+// import DOMPurify from "dompurify";
+
+// /* ─────────── ICON ASSETS (your SVGs) ─────────── */
+// import ViewIcon from "../../images/icons/View Icon.svg";
+// import CommentIcon from "../../images/icons/comment icon.svg";
+// import LikeIcon from "../../images/icons/like icon.svg";
+
+// import "../../styles/ArticleDetailsPage.css";
+
+// const RELATED_SOURCE_LIMIT = 20;
+// const CARD_LIMIT = 4;
+
+// export default function ArticleDetailPage() {
+//   const { articleId } = useParams();
+//   const { currentUser } = useAuth();
+//   const uid = currentUser?.uid;
+
+//   /* ── keep URL clean + jump to top ── */
+//   useEffect(() => {
+//     if (window.location.hash) {
+//       window.history.replaceState(
+//         null,
+//         document.title,
+//         window.location.pathname
+//       );
+//     }
+
+//     window.scrollTo({ top: 0, behavior: "auto" });
+//   }, [articleId]);
+
+//   /*
+//    * Cost saving:
+//    * Earlier this page loaded 50 articles for recommended/related.
+//    * 20 is enough for 4 recommended + 4 related cards and reduces list reads.
+//    */
+//   const allArticles = useArticles(RELATED_SOURCE_LIMIT) ?? [];
+
+//   /* ── local state ── */
+//   const [article, setArticle] = useState(null);
+//   const [author, setAuthor] = useState(null);
+//   const [loading, setLoading] = useState(true);
+
+//   const [views, setViews] = useState(0);
+//   const [likes, setLikes] = useState([]);
+//   const [bookmarks, setBookmarks] = useState([]);
+//   const [commentCnt, setCommentCnt] = useState(0);
+
+//   const [authorMap, setAuthorMap] = useState({});
+//   const [commentsReady, setCommentsReady] = useState(false);
+
+//   const listEndRef = useRef(null);
+//   const commentsSectionRef = useRef(null);
+
+//   /*
+//    * Cost/performance:
+//    * Keep DOMPurify sanitization, but add lazy/async image loading to article body.
+//    * This does not change image URLs or editor-generated HTML structure.
+//    */
+//   const safeBodyHTML = useMemo(() => {
+//     const cleanHTML = DOMPurify.sanitize(article?.body || "", {
+//       ADD_ATTR: [
+//         "data-size",
+//         "class",
+//         "loading",
+//         "decoding",
+//         "referrerpolicy",
+//         "alt",
+//       ],
+//     });
+
+//     try {
+//       const parser = new DOMParser();
+//       const parsed = parser.parseFromString(cleanHTML, "text/html");
+
+//       parsed.querySelectorAll("img").forEach((img) => {
+//         img.setAttribute("loading", "lazy");
+//         img.setAttribute("decoding", "async");
+//         img.setAttribute("referrerpolicy", "no-referrer");
+
+//         if (!img.getAttribute("alt")) {
+//           img.setAttribute("alt", article?.title || "Article image");
+//         }
+//       });
+
+//       return parsed.body.innerHTML;
+//     } catch {
+//       return cleanHTML;
+//     }
+//   }, [article?.body, article?.title]);
+
+//   /* ── 1. first fetch ── */
+//   useEffect(() => {
+//     let alive = true;
+
+//     (async () => {
+//       try {
+//         setLoading(true);
+//         setArticle(null);
+//         setAuthor(null);
+//         setCommentsReady(false);
+
+//         const snap = await rdbGet(
+//           rdbRef(getDatabase(), `articles/${articleId}`)
+//         );
+
+//         if (!alive) return;
+
+//         if (!snap.exists()) {
+//           setArticle(null);
+//           setAuthor(null);
+//           setLoading(false);
+//           return;
+//         }
+
+//         const data = snap.val();
+
+//         setArticle({ id: articleId, ...data });
+
+//         if (data.authorId) {
+//           const aSnap = await getDoc(doc(fsDb, "users", data.authorId));
+
+//           if (!alive) return;
+
+//           setAuthor(aSnap.exists() ? aSnap.data() : null);
+//         } else {
+//           setAuthor(null);
+//         }
+//       } catch (e) {
+//         console.error("Article fetch failed:", e);
+//       } finally {
+//         if (alive) {
+//           setLoading(false);
+//         }
+//       }
+//     })();
+
+//     return () => {
+//       alive = false;
+//     };
+//   }, [articleId]);
+
+//   /* ── 2. live counters for current article only ── */
+//   useEffect(() => {
+//     if (!articleId) return;
+
+//     const u1 = streamViews(articleId, (v) => setViews(v || 0));
+//     const u2 = streamLikes(articleId, setLikes);
+//     const u3 = streamBookmarks(articleId, setBookmarks);
+//     const u4 = streamCommentCount(articleId, setCommentCnt);
+
+//     return () => {
+//       u1();
+//       u2();
+//       u3();
+//       u4();
+//     };
+//   }, [articleId]);
+
+//   /*
+//    * ── 3. unique-ish view (time-on-page) ──
+//    * Cost saving:
+//    * Keep the same 10-second view rule, but only increment once per article
+//    * per browser session. This avoids repeated refresh/write cost.
+//    */
+//   useEffect(() => {
+//     if (!articleId) return;
+
+//     const viewerKey = uid || "guest";
+//     const sessionKey = `laonaz:viewed:${articleId}:${viewerKey}`;
+
+//     const timer = setTimeout(() => {
+//       try {
+//         if (sessionStorage.getItem(sessionKey)) return;
+
+//         sessionStorage.setItem(sessionKey, "1");
+//         incrementView(articleId);
+//       } catch {
+//         incrementView(articleId);
+//       }
+//     }, 10000);
+
+//     return () => clearTimeout(timer);
+//   }, [articleId, uid]);
+
+//   /*
+//    * ── 4. lazy comments ──
+//    * Cost saving:
+//    * CommentList may open comment listeners/reads.
+//    * We mount it only when the comment section comes near viewport.
+//    * If browser does not support IntersectionObserver, comments still load.
+//    */
+//  useEffect(() => {
+//   if (commentsReady) return;
+
+//   const node = commentsSectionRef.current;
+
+//   // Safe fallback: do not keep comments stuck forever.
+//   const fallbackTimer = setTimeout(() => {
+//     setCommentsReady(true);
+//   }, 1000);
+
+//   if (!node || !("IntersectionObserver" in window)) {
+//     return () => clearTimeout(fallbackTimer);
+//   }
+
+//   const observer = new IntersectionObserver(
+//     (entries) => {
+//       const entry = entries[0];
+
+//       if (entry?.isIntersecting) {
+//         setCommentsReady(true);
+//         observer.disconnect();
+//         clearTimeout(fallbackTimer);
+//       }
+//     },
+//     {
+//       root: null,
+//       rootMargin: "600px",
+//       threshold: 0,
+//     }
+//   );
+
+//   observer.observe(node);
+
+//   return () => {
+//     observer.disconnect();
+//     clearTimeout(fallbackTimer);
+//   };
+// }, [commentsReady, articleId]);
+
+//   /* ── 5. rec/related lists & author cache ── */
+//   const rec = useMemo(() => {
+//     return allArticles
+//       .filter((a) => a.id !== articleId)
+//       .slice(0, CARD_LIMIT);
+//   }, [allArticles, articleId]);
+
+//   const related = useMemo(() => {
+//     return allArticles
+//       .filter((a) => a.category === article?.category && a.id !== articleId)
+//       .slice(0, CARD_LIMIT);
+//   }, [allArticles, article?.category, articleId]);
+
+//   useEffect(() => {
+//     const need = new Set([...rec, ...related].map((a) => a.authorId));
+//     const miss = [...need].filter((id) => id && !authorMap[id]);
+
+//     if (!miss.length) return;
+
+//     let alive = true;
+
+//     (async () => {
+//       try {
+//         const pairs = await Promise.all(
+//           miss.map(async (id) => {
+//             const s = await getDoc(doc(fsDb, "users", id));
+//             return [id, s.exists() ? { uid: id, ...s.data() } : null];
+//           })
+//         );
+
+//         if (!alive) return;
+
+//         setAuthorMap((prev) => ({
+//           ...prev,
+//           ...Object.fromEntries(pairs),
+//         }));
+//       } catch (err) {
+//         console.error("Author cache fetch failed:", err);
+//       }
+//     })();
+
+//     return () => {
+//       alive = false;
+//     };
+//   }, [rec, related, authorMap]);
+
+//   /* ── guards ── */
+//   if (loading) return <MDBSpinner className="d-block mx-auto my-5" />;
+//   if (!article) return <p className="text-center my-5">Article not found.</p>;
+
+//   /* ── helpers ── */
+//   const formatDate = (d) =>
+//     new Date(d).toLocaleDateString("en-US", {
+//       month: "long",
+//       day: "2-digit",
+//       year: "numeric",
+//     });
+
+//   const created = formatDate(article.createdAt);
+//   const updated = formatDate(article.updatedAt);
+//   const edited = article.updatedAt !== article.createdAt;
+
+//   const liked = uid ? likes.includes(uid) : false;
+//   const marked = uid ? bookmarks.includes(uid) : false;
+
+//   const doLike = () => {
+//     if (!uid) return;
+
+//     likeArticle(articleId, uid).catch((err) => {
+//       console.error("likeArticle failed:", err);
+//     });
+//   };
+
+//   const doMark = () => {
+//     if (!uid) return;
+
+//     toggleBookmark(articleId, uid).catch((err) => {
+//       console.error("toggleBookmark failed:", err);
+//     });
+//   };
+
+//   const fullName =
+//     author?.username ||
+//     author?.displayName ||
+//     `${author?.firstName || ""} ${author?.lastName || ""}`.trim() ||
+//     "Unknown author";
+
+//   /* ── design palette from your system ── */
+//   const C = {
+//     pageBg: "var(--clr-field-mist)",
+//     text: "#0A0A0A",
+//     accent: "#5C6B3C",
+//     muted: "#6B6B6B",
+//     border: "#D6D9C6",
+//     tagBg: "#E7ECD6",
+//   };
+
+//   /* ────── UI ────── */
+//   return (
+//     <MDBContainer
+//       fluid="lg"
+//       className="py-5"
+//       style={{ background: "var(--clr-field-mist)" }}
+//     >
+//       <MDBRow className="justify-content-center">
+//         <MDBCol lg="8">
+//           {/* ====== TOP CARD (Hero + Header) ====== */}
+//           <MDBCard
+//             className="border-0 shadow-0 mb-5"
+//             style={{ background: C.pageBg, borderRadius: 24 }}
+//           >
+//             <MDBCardBody className="article-card px-md-5 px-3 py-4">
+//               {/* ====== ARTICLE HEADER (title + meta + author side) ====== */}
+//               <MDBRow className="g-5 flex-column flex-md-row align-items-stretch article-head">
+//                 {/* LEFT: Title + tags + meta */}
+//                 <MDBCol
+//                   md="8"
+//                   className="order-2 order-md-1 d-flex flex-column"
+//                 >
+//                   <h1 className="article-title mb-4">{article.title}</h1>
+
+//                   {/* tags row */}
+//                   {Array.isArray(article.tags) && article.tags.length > 0 && (
+//                     <div className="d-flex flex-wrap gap-2 mb-4 article-tags">
+//                       {article.tags.map((t) => (
+//                         <span className="article-tag" key={t}>
+//                           #{t}
+//                         </span>
+//                       ))}
+//                     </div>
+//                   )}
+
+//                   {/* meta row with icons */}
+//                   <div className="article-meta">
+//                     <span>{edited ? `Updated ${updated}` : created}</span>
+
+//                     <span className="d-inline-flex align-items-center">
+//                       <img
+//                         src={ViewIcon}
+//                         alt=""
+//                         className="far meta-ico me-1"
+//                       />
+//                       {views}
+//                     </span>
+
+//                     <button
+//                       type="button"
+//                       onClick={doLike}
+//                       className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center article-like"
+//                       style={{ color: liked ? C.accent : undefined }}
+//                     >
+//                       <img src={LikeIcon} alt="" className="meta-ico me-1" />
+//                       {likes.length}
+//                     </button>
+
+//                     <span className="d-inline-flex align-items-center">
+//                       <img
+//                         src={CommentIcon}
+//                         alt=""
+//                         className="far meta-ico me-1"
+//                       />
+//                       {commentCnt}
+//                     </span>
+
+//                     <span
+//                       className="d-inline-flex align-items-center"
+//                       role="button"
+//                       title="Share"
+//                     >
+//                       <MDBIcon
+//                         far
+//                         icon="share-square"
+//                         className="meta-ico-large"
+//                       />
+//                     </span>
+
+//                     <button
+//                       type="button"
+//                       onClick={doMark}
+//                       className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center article-bookmark"
+//                       title={marked ? "Bookmarked" : "Bookmark"}
+//                       style={{ color: marked ? "#FFC107" : undefined }}
+//                     >
+//                       <MDBIcon
+//                         icon="star"
+//                         fas={marked}
+//                         far={!marked}
+//                         className="meta-ico meta-ico-large"
+//                       />
+//                     </button>
+//                   </div>
+//                 </MDBCol>
+
+//                 {/* RIGHT: Author block with vertical divider */}
+//                 <MDBCol
+//                   md="4"
+//                   className="order-1 order-md-2 d-flex justify-content-center justify-content-md-start position-relative author-col"
+//                 >
+//                   <Link
+//                     to={author?.username ? `/u/${author.username}` : "/profile"}
+//                     className="d-flex flex-column align-items-center align-items-md-start text-center text-md-start w-100 author-link"
+//                   >
+//                     <img
+//                       src={author?.avatarUrl || "https://placehold.co/160x160"}
+//                       alt={fullName}
+//                       className="rounded-circle mb-5 author-avatar"
+//                       loading="lazy"
+//                       decoding="async"
+//                     />
+
+//                     <div className="author-name">{fullName}</div>
+
+//                     {author?.tagline && (
+//                       <small className="author-role">{author.tagline}</small>
+//                     )}
+//                   </Link>
+//                 </MDBCol>
+//               </MDBRow>
+
+//               {/* ====== ARTICLE BODY ====== */}
+//               <div
+//                 className="article-body mt-5 mb-4"
+//                 dangerouslySetInnerHTML={{
+//                   __html: safeBodyHTML,
+//                 }}
+//               />
+//             </MDBCardBody>
+//           </MDBCard>
+
+//           <div
+//             className="mt-5 mb-5"
+//             style={{ height: 1, background: C.border }}
+//           />
+
+//           {/* ====== COMMENTS ====== */}
+//           <div className="mb-4" ref={commentsSectionRef}>
+//             <div className="d-flex align-items-center justify-content-between mb-3">
+//               <h5 className="fw-bold m-0">Add your comment</h5>
+//             </div>
+
+//            {commentsReady ? (
+//   <>
+//     <CommentList articleId={articleId} currentUser={currentUser} />
+//     <div ref={listEndRef} />
+//   </>
+// ) : (
+//   <div className="py-3 text-muted">
+//     <button
+//       type="button"
+//       className="btn btn-link p-0"
+//       onClick={() => setCommentsReady(true)}
+//       style={{
+//         color: "#5C6B3C",
+//         fontFamily: "Poppins, sans-serif",
+//         fontWeight: 600,
+//         textDecoration: "underline",
+//       }}
+//     >
+//       Load comments
+//     </button>
+//   </div>
+// )}
+//           </div>
+
+//           {/* ====== RECOMMENDED ====== */}
+//           {rec.length > 0 && (
+//             <>
+//               <h5 className="fw-bold mt-4 mb-3">Recommended from LAONAZ</h5>
+
+//               <MDBRow className="g-4">
+//                 {rec.map((a) => (
+//                   <MDBCol md="6" key={a.id}>
+//                     <ArticleCard
+//                       article={a}
+//                       author={authorMap[a.authorId]}
+//                       liveMeta={false}
+//                     />
+//                   </MDBCol>
+//                 ))}
+//               </MDBRow>
+//             </>
+//           )}
+
+//           {/* ====== RELATED ====== */}
+//           {related.length > 0 && (
+//             <>
+//               <h5 className="fw-bold mt-5 mb-3">
+//                 More articles related to{" "}
+//                 {article.category ? `#${article.category}` : "this topic"}
+//               </h5>
+
+//               <MDBRow className="g-4">
+//                 {related.map((a) => (
+//                   <MDBCol md="6" key={a.id}>
+//                     <ArticleCard
+//                       article={a}
+//                       author={authorMap[a.authorId]}
+//                       liveMeta={false}
+//                     />
+//                   </MDBCol>
+//                 ))}
+//               </MDBRow>
+//             </>
+//           )}
+//         </MDBCol>
+//       </MDBRow>
+//     </MDBContainer>
+//   );
+// }
+
+
+//above is working with cost cutting file below one is new one for articlebody cost cutting
 
 
 // src/pages/ArticleDetailPage.jsx
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
-  MDBContainer, MDBRow, MDBCol, MDBCard, MDBCardBody,
-  MDBIcon, MDBSpinner, MDBBadge
+  MDBContainer,
+  MDBRow,
+  MDBCol,
+  MDBCard,
+  MDBCardBody,
+  MDBIcon,
+  MDBSpinner,
 } from "mdb-react-ui-kit";
 import { useParams, Link } from "react-router-dom";
-import { getDatabase, ref as rdbRef, get as rdbGet } from "firebase/database";
 import { doc, getDoc } from "firebase/firestore";
 
-import { auth, db as fsDb } from "../../configs/firebase";
+import { db as fsDb } from "../../configs/firebase";
 import { useAuth } from "../../context/AuthContext";
 import {
-  streamViews, incrementView,
-  toggleBookmark, streamBookmarks,
-  likeArticle, streamLikes,
-  streamCommentCount, useArticles,
+  streamViews,
+  incrementView,
+  toggleBookmark,
+  streamBookmarks,
+  likeArticle,
+  streamLikes,
+  streamCommentCount,
+  useArticles,
 } from "../../configs/useArticles";
+import { getArticleWithBodyOnce } from "../../configs/articles";
 
 import CommentList from "../../components/cards/CommentList";
 import ArticleCard from "../../components/cards/ArticleCard";
 import DOMPurify from "dompurify";
 
-
 /* ─────────── ICON ASSETS (your SVGs) ─────────── */
-import ViewIcon from '../../images/icons/View Icon.svg';
-import CommentIcon from '../../images/icons/comment icon.svg';
-import EditIcon from '../../images/icons/edit icon.svg';
-import DeleteIcon from '../../images/icons/delete icon.svg';
-import LikeIcon from '../../images/icons/like icon.svg';
+import ViewIcon from "../../images/icons/View Icon.svg";
+import CommentIcon from "../../images/icons/comment icon.svg";
+import LikeIcon from "../../images/icons/like icon.svg";
 
+import "../../styles/ArticleDetailsPage.css";
 
-import '../../styles/ArticleDetailsPage.css';
+const RELATED_SOURCE_LIMIT = 20;
+const CARD_LIMIT = 4;
 
 export default function ArticleDetailPage() {
   const { articleId } = useParams();
@@ -2010,12 +3120,22 @@ export default function ArticleDetailPage() {
   /* ── keep URL clean + jump to top ── */
   useEffect(() => {
     if (window.location.hash) {
-      window.history.replaceState(null, document.title, window.location.pathname);
+      window.history.replaceState(
+        null,
+        document.title,
+        window.location.pathname
+      );
     }
+
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [articleId]);
 
-  const allArticles = useArticles(50) ?? [];
+  /*
+   * Cost saving:
+   * This page uses 20 summaries for recommended/related.
+   * Full article body is loaded only for the opened article through getArticleWithBodyOnce().
+   */
+  const allArticles = useArticles(RELATED_SOURCE_LIMIT) ?? [];
 
   /* ── local state ── */
   const [article, setArticle] = useState(null);
@@ -2028,45 +3148,111 @@ export default function ArticleDetailPage() {
   const [commentCnt, setCommentCnt] = useState(0);
 
   const [authorMap, setAuthorMap] = useState({});
+  const [commentsReady, setCommentsReady] = useState(false);
+
   const listEndRef = useRef(null);
+  const commentsSectionRef = useRef(null);
 
+  /*
+   * Cost/performance:
+   * Keep DOMPurify sanitization, but add lazy/async image loading to article body.
+   * This does not change image URLs or editor-generated HTML structure.
+   */
   const safeBodyHTML = useMemo(() => {
-    return DOMPurify.sanitize(article?.body  || "", {
-      ADD_ATTR: ["data-size", "class"], // keep our image sizing + class hooks
+    const cleanHTML = DOMPurify.sanitize(article?.body || "", {
+      ADD_ATTR: [
+        "data-size",
+        "class",
+        "loading",
+        "decoding",
+        "referrerpolicy",
+        "alt",
+      ],
     });
-  }, [article?.body]);
 
+    try {
+      const parser = new DOMParser();
+      const parsed = parser.parseFromString(cleanHTML, "text/html");
 
-  /* ── 1. first fetch ── */
+      parsed.querySelectorAll("img").forEach((img) => {
+        img.setAttribute("loading", "lazy");
+        img.setAttribute("decoding", "async");
+        img.setAttribute("referrerpolicy", "no-referrer");
+
+        if (!img.getAttribute("alt")) {
+          img.setAttribute("alt", article?.title || "Article image");
+        }
+      });
+
+      return parsed.body.innerHTML;
+    } catch {
+      return cleanHTML;
+    }
+  }, [article?.body, article?.title]);
+
+  /*
+   * ── 1. first fetch ──
+   * Phase 5:
+   * Fetch lightweight article summary + full body separately.
+   * This supports:
+   * - new articles: body from articleBodies/{articleId}/body
+   * - old articles: fallback body from articles/{articleId}/body
+   */
   useEffect(() => {
+    let alive = true;
+
     (async () => {
       try {
-        const snap = await rdbGet(rdbRef(getDatabase(), `articles/${articleId}`));
-        if (!snap.exists()) return setLoading(false);
+        setLoading(true);
+        setArticle(null);
+        setAuthor(null);
+        setCommentsReady(false);
 
-        const data = snap.val();
-        setArticle({ id: articleId, ...data });
+        const data = await getArticleWithBodyOnce(articleId);
 
-        const aSnap = await getDoc(doc(fsDb, "users", data.authorId));
-        aSnap.exists() && setAuthor(aSnap.data());
+        if (!alive) return;
+
+        if (!data) {
+          setArticle(null);
+          setAuthor(null);
+          setLoading(false);
+          return;
+        }
+
+        setArticle(data);
+
+        if (data.authorId) {
+          const aSnap = await getDoc(doc(fsDb, "users", data.authorId));
+
+          if (!alive) return;
+
+          setAuthor(aSnap.exists() ? aSnap.data() : null);
+        } else {
+          setAuthor(null);
+        }
       } catch (e) {
-        console.error(e);
+        console.error("Article fetch failed:", e);
       } finally {
-        setLoading(false);
+        if (alive) {
+          setLoading(false);
+        }
       }
     })();
+
+    return () => {
+      alive = false;
+    };
   }, [articleId]);
 
-
-  
-
-  /* ── 2. live counters ── */
+  /* ── 2. live counters for current article only ── */
   useEffect(() => {
     if (!articleId) return;
+
     const u1 = streamViews(articleId, (v) => setViews(v || 0));
     const u2 = streamLikes(articleId, setLikes);
     const u3 = streamBookmarks(articleId, setBookmarks);
     const u4 = streamCommentCount(articleId, setCommentCnt);
+
     return () => {
       u1();
       u2();
@@ -2075,65 +3261,157 @@ export default function ArticleDetailPage() {
     };
   }, [articleId]);
 
-  /* ── 3. unique-ish view (time-on-page) ── */
+  /*
+   * ── 3. unique-ish view (time-on-page) ──
+   * Cost saving:
+   * Keep the same 10-second view rule, but only increment once per article
+   * per browser session. This avoids repeated refresh/write cost.
+   */
   useEffect(() => {
     if (!articleId) return;
-    const timer = setTimeout(() => {
-      incrementView(articleId);
-    }, 10000);
-    return () => clearTimeout(timer);
-  }, [articleId]);
 
-  /* ── 4. rec/related lists & author cache ── */
-  const rec = allArticles.filter((a) => a.id !== articleId).slice(0, 4);
-  const related = allArticles
-    .filter((a) => a.category === article?.category && a.id !== articleId)
-    .slice(0, 4);
+    const viewerKey = uid || "guest";
+    const sessionKey = `laonaz:viewed:${articleId}:${viewerKey}`;
+
+    const timer = setTimeout(() => {
+      try {
+        if (sessionStorage.getItem(sessionKey)) return;
+
+        sessionStorage.setItem(sessionKey, "1");
+        incrementView(articleId);
+      } catch {
+        incrementView(articleId);
+      }
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [articleId, uid]);
+
+  /*
+   * ── 4. lazy comments ──
+   * Cost saving:
+   * CommentList may open comment listeners/reads.
+   * We mount it only when the comment section comes near viewport.
+   * Fallback timer prevents comments from staying stuck.
+   */
+  useEffect(() => {
+    if (commentsReady) return;
+
+    const node = commentsSectionRef.current;
+
+    const fallbackTimer = setTimeout(() => {
+      setCommentsReady(true);
+    }, 1000);
+
+    if (!node || !("IntersectionObserver" in window)) {
+      return () => clearTimeout(fallbackTimer);
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+
+        if (entry?.isIntersecting) {
+          setCommentsReady(true);
+          observer.disconnect();
+          clearTimeout(fallbackTimer);
+        }
+      },
+      {
+        root: null,
+        rootMargin: "600px",
+        threshold: 0,
+      }
+    );
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(fallbackTimer);
+    };
+  }, [commentsReady, articleId]);
+
+  /* ── 5. rec/related lists & author cache ── */
+  const rec = useMemo(() => {
+    return allArticles
+      .filter((a) => a.id !== articleId)
+      .slice(0, CARD_LIMIT);
+  }, [allArticles, articleId]);
+
+  const related = useMemo(() => {
+    return allArticles
+      .filter((a) => a.category === article?.category && a.id !== articleId)
+      .slice(0, CARD_LIMIT);
+  }, [allArticles, article?.category, articleId]);
 
   useEffect(() => {
     const need = new Set([...rec, ...related].map((a) => a.authorId));
     const miss = [...need].filter((id) => id && !authorMap[id]);
+
     if (!miss.length) return;
 
-    (async () => {
-      const pairs = await Promise.all(
-        miss.map(async (id) => {
-          const s = await getDoc(doc(fsDb, "users", id));
-          return [id, s.exists() ? { uid: id, ...s.data() } : null];
-        })
-      );
-      setAuthorMap((p) => ({ ...p, ...Object.fromEntries(pairs) }));
-    })();
-  }, [rec, related, authorMap]);
+    let alive = true;
 
-  
+    (async () => {
+      try {
+        const pairs = await Promise.all(
+          miss.map(async (id) => {
+            const s = await getDoc(doc(fsDb, "users", id));
+            return [id, s.exists() ? { uid: id, ...s.data() } : null];
+          })
+        );
+
+        if (!alive) return;
+
+        setAuthorMap((prev) => ({
+          ...prev,
+          ...Object.fromEntries(pairs),
+        }));
+      } catch (err) {
+        console.error("Author cache fetch failed:", err);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [rec, related, authorMap]);
 
   /* ── guards ── */
   if (loading) return <MDBSpinner className="d-block mx-auto my-5" />;
   if (!article) return <p className="text-center my-5">Article not found.</p>;
 
   /* ── helpers ── */
-  // const created = new Date(article.createdAt).toLocaleDateString();
-  // const updated = new Date(article.updatedAt).toLocaleDateString();
-  // const edited = article.updatedAt !== article.createdAt;
-
   const formatDate = (d) =>
-  new Date(d).toLocaleDateString("en-US", {
-    month: "long",
-    day: "2-digit",
-    year: "numeric",
-  });
+    new Date(d).toLocaleDateString("en-US", {
+      month: "long",
+      day: "2-digit",
+      year: "numeric",
+    });
 
   const created = formatDate(article.createdAt);
   const updated = formatDate(article.updatedAt);
-  const edited  = article.updatedAt !== article.createdAt;
+  const edited = article.updatedAt !== article.createdAt;
 
   const liked = uid ? likes.includes(uid) : false;
   const marked = uid ? bookmarks.includes(uid) : false;
-  const doLike = () => uid && likeArticle(articleId, uid);
-  const doMark = () => uid && toggleBookmark(articleId, uid);
 
- 
+  const doLike = () => {
+    if (!uid) return;
+
+    likeArticle(articleId, uid).catch((err) => {
+      console.error("likeArticle failed:", err);
+    });
+  };
+
+  const doMark = () => {
+    if (!uid) return;
+
+    toggleBookmark(articleId, uid).catch((err) => {
+      console.error("toggleBookmark failed:", err);
+    });
+  };
 
   const fullName =
     author?.username ||
@@ -2141,10 +3419,9 @@ export default function ArticleDetailPage() {
     `${author?.firstName || ""} ${author?.lastName || ""}`.trim() ||
     "Unknown author";
 
-    
   /* ── design palette from your system ── */
   const C = {
-    pageBg: 'var(--clr-field-mist)',
+    pageBg: "var(--clr-field-mist)",
     text: "#0A0A0A",
     accent: "#5C6B3C",
     muted: "#6B6B6B",
@@ -2152,318 +3429,186 @@ export default function ArticleDetailPage() {
     tagBg: "#E7ECD6",
   };
 
-  
-
   /* ────── UI ────── */
   return (
-    <MDBContainer fluid="lg" className="py-5" style={{background: 'var(--clr-field-mist)'}}>
+    <MDBContainer
+      fluid="lg"
+      className="py-5"
+      style={{ background: "var(--clr-field-mist)" }}
+    >
       <MDBRow className="justify-content-center">
         <MDBCol lg="8">
           {/* ====== TOP CARD (Hero + Header) ====== */}
-          <MDBCard className="border-0 shadow-0 mb-5" style={{ background: C.pageBg, borderRadius: 24 }}>
-            {/* Hero image (show the whole image, no crop) */}
-            {/* <div
-              style={{
-                width: "100%",
-                background: C.pageBg,
-                borderTopLeftRadius: 24,
-                borderTopRightRadius: 24,
-                overflow: "hidden",
-              }}
-            > */}
-              {/* <div
-                style={{
-                  width: "100%",
-                  aspectRatio: "16 / 9",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              > */}
-                {/* <img
-                  src={article.coverUrl || "https://placehold.co/1200x675?text=No+Image"}
-                  alt={article.title}
-                  style={{
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "contain", // ← show entire image in frame
-                  }}
-                /> */}
-              {/* </div> */}
-            {/* </div> */}
+          <MDBCard
+            className="border-0 shadow-0 mb-5"
+            style={{ background: C.pageBg, borderRadius: 24 }}
+          >
+            <MDBCardBody className="article-card px-md-5 px-3 py-4">
+              {/* ====== ARTICLE HEADER (title + meta + author side) ====== */}
+              <MDBRow className="g-5 flex-column flex-md-row align-items-stretch article-head">
+                {/* LEFT: Title + tags + meta */}
+                <MDBCol
+                  md="8"
+                  className="order-2 order-md-1 d-flex flex-column"
+                >
+                  <h1 className="article-title mb-4">{article.title}</h1>
 
-            {/* <MDBCardBody className="px-md-5 px-3 py-4">
-            <MDBRow className="g-5 flex-column flex-md-row align-items-stretch">               
-                <MDBCol md="8" className="order-2 order-md-1 d-flex flex-column">
-                  <h1
-                    className="fw-bold mb-7"
-                    style={{ lineHeight: 1.2, fontSize: "2.4rem", color: C.text }}
-                  >
-                    {article.title}
-                  </h1>
-
+                  {/* tags row */}
                   {Array.isArray(article.tags) && article.tags.length > 0 && (
-                    <div className="d-flex flex-wrap gap-2 mb-4">
+                    <div className="d-flex flex-wrap gap-2 mb-4 article-tags">
                       {article.tags.map((t) => (
-                         <span
-                      key={t}
-                      style={{
-                        fontFamily: 'Poppins, sans-serif',
-                        fontWeight: 600,          
-                        fontSize: '14px',
-                        lineHeight: '150%',
-                        letterSpacing: '0px',
-                        color: '#5C6B3C',
-                      }}
-                    >
-                      #{t}
-                    </span>
+                        <span className="article-tag" key={t}>
+                          #{t}
+                        </span>
                       ))}
                     </div>
                   )}
 
-                  <div
-                    className="d-flex align-items-center flex-wrap gap-4 small"
-                    style={{ color: C.muted }}
-                  >
+                  {/* meta row with icons */}
+                  <div className="article-meta">
                     <span>{edited ? `Updated ${updated}` : created}</span>
 
-                   
-
                     <span className="d-inline-flex align-items-center">
-                      <MDBIcon far icon="eye" className="me-2" />
+                      <img
+                        src={ViewIcon}
+                        alt=""
+                        className="far meta-ico me-1"
+                      />
                       {views}
                     </span>
 
                     <button
                       type="button"
                       onClick={doLike}
-                      className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center"
-                      style={{ color: liked ? C.accent : C.muted }}
+                      className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center article-like"
+                      style={{ color: liked ? C.accent : undefined }}
                     >
-                      <MDBIcon icon="thumbs-up" fas={liked} far={!liked} className="me-2" />
+                      <img src={LikeIcon} alt="" className="meta-ico me-1" />
                       {likes.length}
                     </button>
 
                     <span className="d-inline-flex align-items-center">
-                      <MDBIcon far icon="comment" className="me-2" />
+                      <img
+                        src={CommentIcon}
+                        alt=""
+                        className="far meta-ico me-1"
+                      />
                       {commentCnt}
                     </span>
 
-                    <span className="d-inline-flex align-items-center" role="button" title="Share">
-                      <MDBIcon far icon="share-square" />
+                    <span
+                      className="d-inline-flex align-items-center"
+                      role="button"
+                      title="Share"
+                    >
+                      <MDBIcon
+                        far
+                        icon="share-square"
+                        className="meta-ico-large"
+                      />
                     </span>
 
                     <button
                       type="button"
                       onClick={doMark}
-                      className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center"
-                      style={{ color: marked ? "#FFC107" : C.muted }}
+                      className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center article-bookmark"
                       title={marked ? "Bookmarked" : "Bookmark"}
+                      style={{ color: marked ? "#FFC107" : undefined }}
                     >
-                      <MDBIcon icon="star" fas={marked} far={!marked} />
+                      <MDBIcon
+                        icon="star"
+                        fas={marked}
+                        far={!marked}
+                        className="meta-ico meta-ico-large"
+                      />
                     </button>
                   </div>
-
-                 
-                  
                 </MDBCol>
-                 <div
-                  className="d-none d-md-block"
-                  style={{
-                    width: 2,
-                    background: "#C9CEB6",
-                    margin: "0 1.5rem",
-                  }}
-                />
-               
 
+                {/* RIGHT: Author block with vertical divider */}
                 <MDBCol
                   md="4"
-                  className="order-1 order-md-2 d-flex justify-content-center justify-content-md-start"
+                  className="order-1 order-md-2 d-flex justify-content-center justify-content-md-start position-relative author-col"
                 >
-                  
                   <Link
                     to={author?.username ? `/u/${author.username}` : "/profile"}
-                    className="ps-md-4 d-flex flex-column align-items-center align-items-md-start text-center text-md-start w-100"
-                    style={{
-                      textDecoration: "none",
-                      color: "inherit",
-                    }}
+                    className="d-flex flex-column align-items-center align-items-md-start text-center text-md-start w-100 author-link"
                   >
                     <img
-                      src={author?.avatarUrl || currentUser?.photoURL || "https://placehold.co/160x160"}
+                      src={author?.avatarUrl || "https://placehold.co/160x160"}
                       alt={fullName}
-                      className="rounded-circle mb-3"
-                      width="96"
-                      height="96"
-                      style={{ objectFit: "cover" }}
+                      className="rounded-circle mb-5 author-avatar"
+                      loading="lazy"
+                      decoding="async"
                     />
-                    <div className="fw-semibold">{fullName}</div>
+
+                    <div className="author-name">{fullName}</div>
+
                     {author?.tagline && (
-                      <small className="text-muted">{author.tagline}</small>
+                      <small className="author-role">{author.tagline}</small>
                     )}
                   </Link>
                 </MDBCol>
               </MDBRow>
 
+              {/* ====== ARTICLE BODY ====== */}
               <div
                 className="article-body mt-5 mb-4"
-                style={{
-                  lineHeight: 1.8,
-                  color: C.text,
-                  fontSize: "1.02rem",
-                }}
                 dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(article.body),
+                  __html: safeBodyHTML,
                 }}
               />
-            </MDBCardBody> */}
-            <MDBCardBody className="article-card px-md-5 px-3 py-4">
-  {/* ====== ARTICLE HEADER (title + meta + author side) ====== */}
-  <MDBRow className="g-5 flex-column flex-md-row align-items-stretch article-head">
-    {/* LEFT: Title + tags + meta */}
-    <MDBCol md="8" className="order-2 order-md-1 d-flex flex-column">
-      <h1 className="article-title mb-4">
-        {article.title}
-      </h1>
-
-      {/* tags row */}
-      {Array.isArray(article.tags) && article.tags.length > 0 && (
-        <div className="d-flex flex-wrap gap-2 mb-4 article-tags">
-          {article.tags.map((t) => (
-            <span className="article-tag" key={t}>#{t}</span>
-          ))}
-        </div>
-      )}
-
-      {/* meta row with icons */}
-      <div className="article-meta">
-        <span>{edited ? `Updated ${updated}` : created}</span>
-
-        <span className="d-inline-flex align-items-center">
-          {/* <MDBIcon far  src={ViewIcon} className="meta-ico me-2" /> */}
-           <img 
-            src={ViewIcon}
-            alt=""
-            className="far meta-ico me-1"
-            />
-          {views}
-        </span>
-
-        <button
-          type="button"
-          onClick={doLike}
-          className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center article-like"
-        >
-          {/* <MDBIcon icon="thumbs-up" fas={liked} far={!liked} className="meta-ico me-2" /> */}
-          <img 
-          // fas={liked} far={!liked}
-            src={LikeIcon}
-            alt=""
-            className="meta-ico me-1"
-                      />
-          {likes.length}
-        </button>
-
-        <span className="d-inline-flex align-items-center">
-          {/* <MDBIcon far icon="comment" className="meta-ico me-2" /> */}
-          <img
-            src={CommentIcon}
-            alt=""
-            className="far meta-ico me-1"
-                      />
-          {commentCnt}
-        </span>
-
-        <span className="d-inline-flex align-items-center" role="button" title="Share">
-          <MDBIcon far icon="share-square" className="meta-ico-large" />
-        </span>
-
-        <button
-          type="button"
-          onClick={doMark}
-          className="btn btn-link p-0 text-decoration-none d-inline-flex align-items-center article-bookmark"
-          title={marked ? 'Bookmarked' : 'Bookmark'}
-        >
-          <MDBIcon icon="star" fas={marked} far={!marked} className="meta-ico meta-ico-large" />
-        </button>
-      </div>
-    </MDBCol>
-
-    {/* RIGHT: Author block with vertical divider */}
-    <MDBCol
-      md="4"
-      className="order-1 order-md-2 d-flex justify-content-center justify-content-md-start position-relative author-col"
-    >
-      <Link
-        to={author?.username ? `/u/${author.username}` : "/profile"}
-        className="d-flex flex-column align-items-center align-items-md-start text-center text-md-start w-100 author-link"
-      >
-        <img
-          src={author?.avatarUrl || "https://placehold.co/160x160"}
-          alt={fullName}
-          className="rounded-circle mb-5 author-avatar"
-        />
-        <div className="author-name">{fullName}</div>
-        {author?.tagline && (
-          <small className="author-role">{author.tagline}</small>
-        )}
-      </Link>
-    </MDBCol>
-  </MDBRow>
-
-  {/* ====== ARTICLE BODY ====== */}
-  <div
-    className="article-body mt-5 mb-4"
-    dangerouslySetInnerHTML={{
-      __html: safeBodyHTML ,
-    }}
-  />
-</MDBCardBody>
-
+            </MDBCardBody>
           </MDBCard>
 
-           <div
+          <div
             className="mt-5 mb-5"
             style={{ height: 1, background: C.border }}
-            />
+          />
 
           {/* ====== COMMENTS ====== */}
-          <div
-            className="mb-4"
-            // style={{
-            //   background: "#FFFFFF",
-            //   border: `1px solid ${C.border}`,
-            //   borderRadius: 16,
-            //   padding: "1.25rem",
-            // }}
-          >
+          <div className="mb-4" ref={commentsSectionRef}>
             <div className="d-flex align-items-center justify-content-between mb-3">
               <h5 className="fw-bold m-0">Add your comment</h5>
-              {/* <span
-                className="badge rounded-pill"
-                style={{ background: C.tagBg, color: C.accent, border: `1px solid ${C.border}` }}
-              >
-                {commentCnt}
-              </span> */}
             </div>
 
-            {/* keep your existing component, just wrapped for visuals */}
-            <CommentList articleId={articleId} currentUser={currentUser} />
-            <div ref={listEndRef} />
+            {commentsReady ? (
+              <>
+                <CommentList articleId={articleId} currentUser={currentUser} />
+                <div ref={listEndRef} />
+              </>
+            ) : (
+              <div className="py-3 text-muted">
+                <button
+                  type="button"
+                  className="btn btn-link p-0"
+                  onClick={() => setCommentsReady(true)}
+                  style={{
+                    color: "#5C6B3C",
+                    fontFamily: "Poppins, sans-serif",
+                    fontWeight: 600,
+                    textDecoration: "underline",
+                  }}
+                >
+                  Load comments
+                </button>
+              </div>
+            )}
           </div>
 
           {/* ====== RECOMMENDED ====== */}
           {rec.length > 0 && (
             <>
               <h5 className="fw-bold mt-4 mb-3">Recommended from LAONAZ</h5>
+
               <MDBRow className="g-4">
                 {rec.map((a) => (
                   <MDBCol md="6" key={a.id}>
-                    <ArticleCard article={a} author={authorMap[a.authorId]} />
+                    <ArticleCard
+                      article={a}
+                      author={authorMap[a.authorId]}
+                      liveMeta={false}
+                    />
                   </MDBCol>
                 ))}
               </MDBRow>
@@ -2474,12 +3619,18 @@ export default function ArticleDetailPage() {
           {related.length > 0 && (
             <>
               <h5 className="fw-bold mt-5 mb-3">
-                More articles related to {article.category ? `#${article.category}` : "this topic"}
+                More articles related to{" "}
+                {article.category ? `#${article.category}` : "this topic"}
               </h5>
+
               <MDBRow className="g-4">
                 {related.map((a) => (
                   <MDBCol md="6" key={a.id}>
-                    <ArticleCard article={a} author={authorMap[a.authorId]} />
+                    <ArticleCard
+                      article={a}
+                      author={authorMap[a.authorId]}
+                      liveMeta={false}
+                    />
                   </MDBCol>
                 ))}
               </MDBRow>

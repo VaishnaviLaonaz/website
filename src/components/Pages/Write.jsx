@@ -9065,31 +9065,1515 @@
 
 
 
+//below code working before cost cutting
 
 
 
 
 
+// import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+// import { createPortal } from 'react-dom';
+// import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
+// import { useAuth } from '../../context/AuthContext';
+// import { useUserDoc } from '../../configs/user';
+// import { createArticle, updateArticle } from '../../configs/useArticles';
+// import {
+//   createDraft,
+//   updateDraft,
+//   deleteDraft,
+//   getDraftOnce,
+// } from '../../configs/useArticles';
+// import { ref as rtdbRef, get as rtdbGet, remove as rtdbRemove } from 'firebase/database';
+// import { rtdb, db as fsDb, storage } from '../../configs/firebase';
+// import {
+//   doc, setDoc, collection, onSnapshot,
+//   serverTimestamp, increment,
+// } from 'firebase/firestore';
+// import { uploadBytes, getDownloadURL, ref as sRef } from 'firebase/storage';
+// import DOMPurify from 'dompurify';
+
+// import '../../styles/writearticlepage.css';
+// import 'mdb-react-ui-kit/dist/css/mdb.min.css';
+// import '@fortawesome/fontawesome-free/css/all.min.css';
+
+// import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+// import StarterKit from '@tiptap/starter-kit';
+// import Underline from '@tiptap/extension-underline';
+// import TextStyle from '@tiptap/extension-text-style';
+// import Color from '@tiptap/extension-color';
+// import Highlight from '@tiptap/extension-highlight';
+// import LinkExt from '@tiptap/extension-link';
+// import Image from '@tiptap/extension-image';
+// import Youtube from '@tiptap/extension-youtube';
+// import TextAlign from '@tiptap/extension-text-align';
+// import { TextSelection } from 'prosemirror-state';
+// // ✅ Checkbox list (Task list)
+// import TaskList from '@tiptap/extension-task-list';
+// import TaskItem from '@tiptap/extension-task-item';
+
+// import Picker from '@emoji-mart/react';
+// import emojiData from '@emoji-mart/data';
+
+// import { MDBContainer, MDBRow, MDBCol, MDBBtn, MDBIcon, MDBSpinner } from 'mdb-react-ui-kit';
+
+// /* ---------- tiny button primitive for the toolbar ---------- */
+// function ToolbarButton({ title, icon, onClick, active, disabled, children }) {
+//   return (
+//     <button
+//       type="button"
+//       className={`tb-btn${active ? ' is-active' : ''}`}
+//       title={title}
+//       onClick={onClick}
+//       disabled={disabled}
+//       aria-pressed={!!active}
+//       aria-label={title}
+//     >
+//       <i className={`fas fa-${icon}`} />
+//       {children}
+//     </button>
+//   );
+// }
+
+// export default function WriteArticle() {
+//   const { currentUser } = useAuth();
+//   const { userDoc } = useUserDoc();
+
+//   const nav = useNavigate();
+//   const { id } = useParams();
+//   const location = useLocation();
+//   const isDraftMode = new URLSearchParams(location.search).get('draft') === '1';
+//   const isEdit = Boolean(id);
+
+//   const [suggestedTags, setSuggestedTags] = useState([]);
+//   const [publishing, setPublishing] = useState(false);
+//   const [previewOpen, setPreviewOpen] = useState(false);
+
+//   const [title, setTitle] = useState('');
+//   const [tags, setTags] = useState([]);
+
+//   const [coverURL, setCoverURL] = useState(null);
+
+//   const [isEmpty, setIsEmpty] = useState(true);
+//   const [isFocused, setIsFocused] = useState(false);
+
+//   const imgInputRef = useRef(null);
+//   const fileInputRef = useRef(null);
+
+//   // “+ More” panel (portaled)
+//   const [moreOpen, setMoreOpen] = useState(false);
+//   const moreBtnRef = useRef(null);
+//   const morePanelRef = useRef(null);
+//   const [morePos, setMorePos] = useState({ top: 0, left: 0 });
+
+//   // Emoji picker (portaled)
+//   const [pickerVisible, setPickerVisible] = useState(false);
+//   const emojiBtnRef = useRef(null);
+//   const emojiPanelRef = useRef(null);
+//   const [emojiPos, setEmojiPos] = useState({ top: 0, left: 0 });
+
+//   // ✅ Highlight dropdown (portaled)
+//   const [hlOpen, setHlOpen] = useState(false);
+//   const hlBtnRef = useRef(null);
+//   const hlPanelRef = useRef(null);
+//   const [hlPos, setHlPos] = useState({ top: 0, left: 0 });
+//   const [activeHighlightColor, setActiveHighlightColor] = useState('#D9D9D9');
+
+//   const lastSelectionRef = useRef(null);
+
+//   /* ---------- tags (firestore) ---------- */
+//   useEffect(() => {
+//     if (!currentUser) return;
+
+//     const unsub = onSnapshot(collection(fsDb, 'tags'), snap => {
+//       const map = new Map();
+
+//       snap.docs.forEach(d => {
+//         const raw = d.id || '';
+//         const key = raw.trim().toLowerCase();
+//         if (!key) return;
+//         const count = d.data().count || 0;
+
+//         if (!map.has(key)) map.set(key, { name: key, label: raw, count });
+//         else {
+//           const prev = map.get(key);
+//           map.set(key, { ...prev, count: Math.max(prev.count, count) });
+//         }
+//       });
+
+//       const list = Array.from(map.values()).sort((a, b) => b.count - a.count);
+//       setSuggestedTags(list);
+//     });
+
+//     return () => unsub();
+//   }, [currentUser]);
+
+//   /* =========================================================
+//      ✅ Non-sticky highlight (selection only)
+//      ========================================================= */
+//   const NonInclusiveHighlight = Highlight.extend({
+//     inclusive: false,
+//   }).configure({ multicolor: true });
+
+//   /* =========================================================
+//      ✅ Image with cover UI (NodeView)
+//      ========================================================= */
+//   const CoverImage = useMemo(() => {
+//     return Image.extend({
+//       addAttributes() {
+//         return {
+//           ...this.parent?.(),
+//           class: {
+//             default: 'article-img',
+//             parseHTML: el => el.getAttribute('class'),
+//             renderHTML: () => ({ class: 'article-img' }),
+//           },
+//           'data-size': {
+//             default: null,
+//             parseHTML: el => el.getAttribute('data-size'),
+//             renderHTML: attrs => (attrs['data-size'] ? { 'data-size': attrs['data-size'] } : {}),
+//           },
+//           'data-id': {
+//             default: null,
+//             parseHTML: el => el.getAttribute('data-id'),
+//             renderHTML: attrs => (attrs['data-id'] ? { 'data-id': attrs['data-id'] } : {}),
+//           },
+//           'data-cover': {
+//             default: null, // "1"
+//             parseHTML: el => el.getAttribute('data-cover'),
+//             renderHTML: attrs => (attrs['data-cover'] ? { 'data-cover': attrs['data-cover'] } : {}),
+//           },
+//         };
+//       },
+
+//       addNodeView() {
+//         return ({ node, editor, getPos }) => {
+//           const wrap = document.createElement('div');
+//           wrap.className = 'article-img-wrap';
+
+//           const img = document.createElement('img');
+//           img.className = 'article-img';
+//           img.setAttribute('src', node.attrs.src);
+//           if (node.attrs.alt) img.setAttribute('alt', node.attrs.alt);
+
+//           if (node.attrs['data-size']) img.setAttribute('data-size', node.attrs['data-size']);
+//           if (node.attrs['data-id']) img.setAttribute('data-id', node.attrs['data-id']);
+//           if (node.attrs['data-cover']) img.setAttribute('data-cover', node.attrs['data-cover']);
+
+//           const ui = document.createElement('div');
+//           ui.className = 'article-img-ui';
+
+//           const label = document.createElement('div');
+//           label.className = 'article-img-label';
+//           label.textContent = 'Set as the cover photo of the article';
+
+//           const btn = document.createElement('button');
+//           btn.type = 'button';
+//           btn.className = 'article-img-cover-btn';
+//           btn.textContent = 'Update this image as your cover photo';
+
+//           btn.addEventListener('mousedown', (e) => {
+//             e.preventDefault();
+//             e.stopPropagation();
+//           });
+
+//           btn.addEventListener('click', (e) => {
+//             e.preventDefault();
+//             e.stopPropagation();
+
+//             const pos = typeof getPos === 'function' ? getPos() : null;
+//             if (pos == null) return;
+
+//             editor.commands.command(({ state, tr }) => {
+//               // clear all covers, set this one
+//               state.doc.descendants((n, p) => {
+//                 if (n.type.name !== 'image') return;
+//                 const next = (p === pos) ? '1' : null;
+//                 if (n.attrs['data-cover'] !== next) {
+//                   tr.setNodeMarkup(p, undefined, { ...n.attrs, 'data-cover': next });
+//                 }
+//               });
+//               return true;
+//             });
+
+//             // move cursor to typing position (so button click doesn’t “stick” on image)
+//             editor.chain().focus().createParagraphNear().run();
+//           });
+
+//           ui.appendChild(label);
+//           ui.appendChild(btn);
+
+//           wrap.appendChild(img);
+//           wrap.appendChild(ui);
+
+//           const setUIState = (n, selected) => {
+//             const isCover = n.attrs['data-cover'] === '1';
+
+//             // orange border when selected and not cover
+//             if (selected && !isCover) wrap.classList.add('is-selected');
+//             else wrap.classList.remove('is-selected');
+
+//             // label visible only if cover
+//             label.style.display = isCover ? 'block' : 'none';
+
+//             // button visible only when selected and not cover
+//             btn.style.display = (selected && !isCover) ? 'inline-flex' : 'none';
+//           };
+
+//           // initial state
+//           setUIState(node, false);
+
+//           return {
+//             dom: wrap,
+//             contentDOM: null,
+
+//             selectNode() {
+//               setUIState(node, true);
+//             },
+//             deselectNode() {
+//               setUIState(node, false);
+//             },
+//             update(updatedNode) {
+//               if (updatedNode.type.name !== 'image') return false;
+
+//               // update node reference + attrs
+//               node = updatedNode;
+
+//               img.setAttribute('src', node.attrs.src);
+//               if (node.attrs['data-size']) img.setAttribute('data-size', node.attrs['data-size']);
+//               else img.removeAttribute('data-size');
+
+//               if (node.attrs['data-id']) img.setAttribute('data-id', node.attrs['data-id']);
+//               else img.removeAttribute('data-id');
+
+//               if (node.attrs['data-cover']) img.setAttribute('data-cover', node.attrs['data-cover']);
+//               else img.removeAttribute('data-cover');
+
+//               // keep UI synced (selection status comes from PM calling select/deselect)
+//               const isSelected = wrap.classList.contains('ProseMirror-selectednode') || wrap.classList.contains('is-selected');
+//               setUIState(node, isSelected);
+
+//               return true;
+//             },
+//           };
+//         };
+//       },
+//     }).configure({ allowBase64: true });
+//   }, []);
+
+//   /* =========================================================
+//      ✅ Editor
+//      ========================================================= */
+//   const editor = useEditor({
+//     extensions: [
+//       StarterKit.configure({
+//         heading: { levels: [1, 2, 3] },
+//       }),
+//       Underline,
+//       TextStyle,
+//       Color,
+//       NonInclusiveHighlight,
+//       LinkExt.configure({ openOnClick: false, HTMLAttributes: { rel: 'noopener nofollow' } }),
+//       CoverImage,
+//       Youtube.configure({ inline: false, width: 640 }),
+//       TextAlign.configure({ types: ['heading', 'paragraph'] }),
+//       TaskList,
+//       TaskItem.configure({ nested: true }),
+//     ],
+//     content: '<p></p>',
+     
+//      editorProps: {
+//     handleTextInput(view, from, to, text) {
+//       const { state } = view;
+//       const sel = state.selection;
+
+//       // ✅ If an image is selected, typing must NOT replace it
+//       if (sel?.node && sel.node.type.name === 'image') {
+//         const after = sel.from + sel.node.nodeSize;
+
+//         // Move cursor AFTER image
+//         const tr = state.tr.setSelection(
+//           TextSelection.create(state.doc, after)
+//         );
+
+//         view.dispatch(tr);
+
+//         // Insert typed text safely
+//         view.dispatch(view.state.tr.insertText(text));
+
+//         return true; // handled
+//       }
+
+//       return false;
+//     },
+
+//     handleKeyDown(view, event) {
+//       const { state } = view;
+//       const sel = state.selection;
+
+//       if (sel?.node && sel.node.type.name === 'image') {
+//         const isPrintable =
+//           event.key.length === 1 &&
+//           !event.ctrlKey &&
+//           !event.metaKey &&
+//           !event.altKey;
+
+//         // ✅ Typing should move cursor, not delete image
+//         if (isPrintable) {
+//           event.preventDefault();
+
+//           const after = sel.from + sel.node.nodeSize;
+//           view.dispatch(
+//             state.tr.setSelection(TextSelection.create(state.doc, after))
+//           );
+
+//           view.dispatch(view.state.tr.insertText(event.key));
+//           return true;
+//         }
+
+//         // ✅ Block Backspace/Delete (only toolbar delete allowed)
+//         if (event.key === 'Backspace' || event.key === 'Delete') {
+//           event.preventDefault();
+//           return true;
+//         }
+//       }
+
+//       return false;
+//     },
+//   },
+   
+
+
+//     onCreate({ editor }) {
+//       const hasText = editor.state.doc.textContent.trim().length > 0;
+//       let hasAnyImage = false;
+//       editor.state.doc.descendants((node) => {
+//         if (node.type.name === 'image') { hasAnyImage = true; return false; }
+//         return true;
+//       });
+//       setIsEmpty(!hasText && !hasAnyImage);
+//     },
+//     onUpdate({ editor }) {
+//       const hasText = editor.state.doc.textContent.trim().length > 0;
+//       let hasAnyImage = false;
+//       editor.state.doc.descendants((node) => {
+//         if (node.type.name === 'image') { hasAnyImage = true; return false; }
+//         return true;
+//       });
+//       setIsEmpty(!hasText && !hasAnyImage);
+//     },
+//   });
+
+//   /* ---------- keep coverURL always in sync with doc ---------- */
+//   const syncCoverFromDoc = useCallback(() => {
+//     if (!editor) return;
+//     let found = null;
+//     editor.state.doc.descendants((node) => {
+//       if (node.type.name === 'image' && node.attrs['data-cover'] === '1') {
+//         found = node.attrs.src;
+//         return false;
+//       }
+//       return true;
+//     });
+//     setCoverURL(found);
+//   }, [editor]);
+
+//   useEffect(() => {
+//     if (!editor) return;
+//     syncCoverFromDoc();
+//     editor.on('transaction', syncCoverFromDoc);
+//     return () => editor.off('transaction', syncCoverFromDoc);
+//   }, [editor, syncCoverFromDoc]);
+
+//   /* ---------- focus/blur (placeholder) ---------- */
+//   useEffect(() => {
+//     if (!editor) return;
+//     const onFocus = () => setIsFocused(true);
+//     const onBlur = () => setIsFocused(false);
+//     editor.on('focus', onFocus);
+//     editor.on('blur', onBlur);
+//     return () => {
+//       editor.off('focus', onFocus);
+//       editor.off('blur', onBlur);
+//     };
+//   }, [editor]);
+
+//   /* ---------- tag helpers ---------- */
+//   const addTag = name => {
+//     const tag = String(name || '').trim().toLowerCase();
+//     if (tag && !tags.includes(tag)) setTags(prev => [...prev, tag]);
+//   };
+//   const removeTag = name => setTags(prev => prev.filter(t => t !== name));
+
+//   /* ---------- click-away + ESC for portaled panels ---------- */
+//   useEffect(() => {
+//     const onDocClick = (e) => {
+//       const inMoreBtn = moreBtnRef.current?.contains(e.target);
+//       const inMorePanel = morePanelRef.current?.contains(e.target);
+//       if (!inMoreBtn && !inMorePanel) setMoreOpen(false);
+
+//       const inEmojiBtn = emojiBtnRef.current?.contains(e.target);
+//       const inEmojiPanel = emojiPanelRef.current?.contains(e.target);
+//       if (!inEmojiBtn && !inEmojiPanel) setPickerVisible(false);
+
+//       const inHlBtn = hlBtnRef.current?.contains(e.target);
+//       const inHlPanel = hlPanelRef.current?.contains(e.target);
+//       if (!inHlBtn && !inHlPanel) setHlOpen(false);
+//     };
+
+//     const onEsc = (e) => {
+//       if (e.key === 'Escape') {
+//         setMoreOpen(false);
+//         setPickerVisible(false);
+//         setHlOpen(false);
+//       }
+//     };
+
+//     document.addEventListener('mousedown', onDocClick);
+//     document.addEventListener('keydown', onEsc);
+//     return () => {
+//       document.removeEventListener('mousedown', onDocClick);
+//       document.removeEventListener('keydown', onEsc);
+//     };
+//   }, []);
+
+//   /* ---------- portal positions ---------- */
+//   useEffect(() => {
+//     const updatePositions = () => {
+//       if (moreOpen && moreBtnRef.current) {
+//         const r = moreBtnRef.current.getBoundingClientRect();
+//         setMorePos({ top: r.bottom + 8 + window.scrollY, left: r.left + window.scrollX });
+//       }
+//       if (pickerVisible && emojiBtnRef.current) {
+//         const r = emojiBtnRef.current.getBoundingClientRect();
+//         setEmojiPos({ top: r.bottom + 8 + window.scrollY, left: r.left + window.scrollX - 8 });
+//       }
+//       if (hlOpen && hlBtnRef.current) {
+//         const r = hlBtnRef.current.getBoundingClientRect();
+//         setHlPos({ top: r.bottom + 8 + window.scrollY, left: r.left + window.scrollX - 6 });
+//       }
+//     };
+
+//     updatePositions();
+//     window.addEventListener('scroll', updatePositions, true);
+//     window.addEventListener('resize', updatePositions);
+//     return () => {
+//       window.removeEventListener('scroll', updatePositions, true);
+//       window.removeEventListener('resize', updatePositions);
+//     };
+//   }, [moreOpen, pickerVisible, hlOpen]);
+
+//   /* =========================================================
+//      ✅ Image upload:
+//      1) Insert image
+//      2) If it's the first image, auto-set as cover (data-cover="1")
+//      3) Immediately return cursor to typing (so image never disappears)
+//      ========================================================= */
+//   const handleImgUpload = (e) => {
+//     const file = e.target.files?.[0];
+//     if (!file || !editor) return;
+
+//     const reader = new FileReader();
+//     reader.onload = () => {
+//       const src = reader.result;
+//       const id = `img_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+//       // do we already have a cover?
+//       let hasCover = false;
+//       editor.state.doc.descendants((node) => {
+//         if (node.type.name === 'image' && node.attrs['data-cover'] === '1') {
+//           hasCover = true;
+//           return false;
+//         }
+//         return true;
+//       });
+
+//       const attrs = { src, 'data-id': id };
+//       if (!hasCover) attrs['data-cover'] = '1'; 
+
+//       editor.commands.command(({ state, tr, dispatch }) => {
+//       const sel = state.selection;
+
+//       // NodeSelection on an image
+//       if (sel?.node && sel.node.type?.name === 'image') {
+//         const after = sel.from + sel.node.nodeSize;
+//         tr.setSelection(TextSelection.create(tr.doc, after));
+//       }
+
+//       if (dispatch) dispatch(tr);
+//       return true;
+//     });
+   
+//     if (editor.isActive('image')) {
+//     editor.chain().focus().createParagraphNear().run();
+//     }
+
+//       editor
+//         .chain()
+//         .focus()
+//         .setImage(attrs)
+//         .createParagraphNear() 
+//         .run();
+
+//       // if first image was cover, ensure all others are cleared (safety)
+//       if (!hasCover) {
+//         editor.commands.command(({ state, tr }) => {
+//           state.doc.descendants((node, pos) => {
+//             if (node.type.name !== 'image') return;
+//             const next = (node.attrs.src === src) ? '1' : null;
+//             if (node.attrs['data-cover'] !== next) {
+//               tr.setNodeMarkup(pos, undefined, { ...node.attrs, 'data-cover': next });
+//             }
+//           });
+//           return true;
+//         });
+//       }
+
+//       e.target.value = '';
+//     };
+
+//     reader.readAsDataURL(file);
+//   };
+
+//   /* ---------- replace selected image (kept) ---------- */
+//   const handleReplaceSelectedImage = (e) => {
+//     const file = e.target.files?.[0];
+//     if (!file || !editor) return;
+
+//     if (!editor.isActive('image')) {
+//       alert('Select an image first to replace it.');
+//       e.target.value = '';
+//       return;
+//     }
+
+//     const sel = editor.state.selection;
+//     const node = sel?.node;
+//     const wasCover = node?.attrs?.['data-cover'] === '1';
+
+//     const reader = new FileReader();
+//     reader.onload = () => {
+//       const newSrc = reader.result;
+//       editor.chain().focus().updateAttributes('image', { src: newSrc }).run();
+
+//       // if replaced image was cover, keep it cover
+//       if (wasCover) {
+//         editor.commands.command(({ state, tr }) => {
+//           state.doc.descendants((n, pos) => {
+//             if (n.type.name !== 'image') return;
+//             const next = (pos === sel.from) ? '1' : n.attrs['data-cover'];
+//             // best-effort: if selection changed, still preserve by src scan
+//             return true;
+//           });
+//           return true;
+//         });
+//       }
+
+//       // get cursor back to typing
+//       editor.chain().focus().createParagraphNear().run();
+//     };
+
+//     reader.readAsDataURL(file);
+//     e.target.value = '';
+//   };
+
+//   /* ---------- toolbar helpers ---------- */
+//   const rememberSelection = () => {
+//     if (!editor) return;
+//     const { from, to } = editor.state.selection;
+//     lastSelectionRef.current = { from, to };
+//   };
+
+//   const setBlockType = (e) => {
+//     const v = e.target.value;
+//     const sel = lastSelectionRef.current;
+
+//     let chain = editor?.chain().focus();
+//     if (!chain) return;
+//     if (sel) chain = chain.setTextSelection(sel);
+
+//     switch (v) {
+//       case 'p': chain.setParagraph().run(); break;
+//       case 'h1': chain.toggleHeading({ level: 1 }).run(); break;
+//       case 'h2': chain.toggleHeading({ level: 2 }).run(); break;
+//       case 'h3': chain.toggleHeading({ level: 3 }).run(); break;
+//       default: break;
+//     }
+
+//     lastSelectionRef.current = null;
+//   };
+
+//   const addLink = () => {
+//     const url = window.prompt('Enter URL (https://…)');
+//     if (!url) return;
+//     editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+//   };
+//   const removeLink = () => editor?.chain().focus().unsetLink().run();
+//   const insertHR = () => editor?.chain().focus().setHorizontalRule().run();
+//   const insertYouTube = () => {
+//     const url = window.prompt('Paste a YouTube URL');
+//     if (!url) return;
+//     editor?.chain().focus().setYoutubeVideo({ src: url, width: 640, height: 360 }).run();
+//   };
+
+//   const handleFileAttach = async (e) => {
+//     const file = e.target.files?.[0];
+//     if (!file || !currentUser) return;
+//     try {
+//       const path = `files/${currentUser.uid}/${Date.now()}_${file.name}`;
+//       const ref = sRef(storage, path);
+//       await uploadBytes(ref, file);
+//       const url = await getDownloadURL(ref);
+//       editor?.chain().focus()
+//         .insertContent(`<a href="${url}" rel="noopener nofollow" target="_blank">${file.name}</a>`)
+//         .run();
+//     } finally {
+//       e.target.value = '';
+//     }
+//   };
+
+//   const clearFormatting = () => editor?.chain().focus().clearNodes().unsetAllMarks().run();
+
+//   /* ---------- emoji select ---------- */
+//   const handleEmojiSelect = (emoji) => {
+//     const char = emoji?.native || '';
+//     if (!char) return;
+//     editor?.chain().focus().insertContent(char).run();
+//     setPickerVisible(false);
+//   };
+
+//   /* =========================================================
+//      ✅ Highlight dropdown logic (selection only + no sticky)
+//      ========================================================= */
+//   const clearStoredHighlight = useCallback(() => {
+//     if (!editor) return;
+//     const { state, view } = editor;
+//     const markType = state.schema.marks.highlight;
+//     if (!markType) return;
+//     view.dispatch(state.tr.removeStoredMark(markType).setStoredMarks([]));
+//   }, [editor]);
+
+//   useEffect(() => {
+//     if (!editor) return;
+//     const fn = () => {
+//       if (editor.state.selection.empty) clearStoredHighlight();
+//     };
+//     editor.on('selectionUpdate', fn);
+//     return () => editor.off('selectionUpdate', fn);
+//   }, [editor, clearStoredHighlight]);
+
+//   const applyHighlightColor = useCallback((color) => {
+//     if (!editor) return;
+
+//     const { to, empty } = editor.state.selection;
+//     if (empty) return;
+
+//     editor.chain().focus().setHighlight({ color }).run();
+//     editor.chain().focus().setTextSelection(to).run();
+//     clearStoredHighlight();
+//     setHlOpen(false);
+//   }, [editor, clearStoredHighlight]);
+
+//   const removeHighlightFromSelection = useCallback(() => {
+//     if (!editor) return;
+
+//     const { to, empty } = editor.state.selection;
+//     if (empty) return;
+
+//     editor.chain().focus().unsetHighlight().run();
+//     editor.chain().focus().setTextSelection(to).run();
+//     clearStoredHighlight();
+//     setHlOpen(false);
+//   }, [editor, clearStoredHighlight]);
+
+//   // Track active highlight color for underline indicator
+//   useEffect(() => {
+//     if (!editor) return;
+
+//     const update = () => {
+//       const attrs = editor.getAttributes('highlight');
+//       const c = attrs?.color;
+//       if (editor.isActive('highlight') && c) setActiveHighlightColor(c);
+//       else setActiveHighlightColor('#D9D9D9');
+//     };
+
+//     update();
+//     editor.on('selectionUpdate', update);
+//     editor.on('transaction', update);
+//     return () => {
+//       editor.off('selectionUpdate', update);
+//       editor.off('transaction', update);
+//     };
+//   }, [editor]);
+
+//   /* =========================================================
+//      ✅ List dropdown logic (NO mismatched transactions)
+//      ========================================================= */
+//   const getActiveListType = () => {
+//     if (!editor) return 'none';
+//     if (editor.isActive('taskList')) return 'task';
+//     if (editor.isActive('bulletList')) return 'bullet';
+//     if (editor.isActive('orderedList')) return 'ordered';
+//     return 'none';
+//   };
+
+//   const [listValue, setListValue] = useState('none');
+
+//   useEffect(() => {
+//     if (!editor) return;
+//     const sync = () => setListValue(getActiveListType());
+//     sync();
+//     editor.on('selectionUpdate', sync);
+//     return () => editor.off('selectionUpdate', sync);
+//   }, [editor]);
+
+//   const setListType = (e) => {
+//     const v = e.target.value;
+//     if (!editor) return;
+
+//     editor
+//       .chain()
+//       .focus()
+//       .command(({ editor, commands }) => {
+//         // if image is selected, move cursor to text first
+//         if (editor.isActive('image')) {
+//           commands.createParagraphNear();
+//         }
+
+//         // always clear all list types first (safe)
+//         if (editor.isActive('taskList')) commands.toggleTaskList();
+//         if (editor.isActive('bulletList')) commands.toggleBulletList();
+//         if (editor.isActive('orderedList')) commands.toggleOrderedList();
+
+//         // then apply selected
+//         if (v === 'bullet') commands.toggleBulletList();
+//         if (v === 'ordered') commands.toggleOrderedList();
+//         if (v === 'task') commands.toggleTaskList();
+
+//         return true;
+//       })
+//       .run();
+
+//     setListValue(v);
+//   };
+
+//   /* =========================================================
+//      ✅ Align dropdown logic (works on current paragraph/heading)
+//      NOTE: “line inside same paragraph” is impossible without splitting.
+//      If user uses Shift+Enter hardBreak, we split the block first.
+//      ========================================================= */
+//   const getActiveAlign = () => {
+//     if (!editor) return 'left';
+//     if (editor.isActive({ textAlign: 'center' })) return 'center';
+//     if (editor.isActive({ textAlign: 'right' })) return 'right';
+//     return 'left';
+//   };
+
+//   const [alignValue, setAlignValue] = useState('left');
+
+//   useEffect(() => {
+//     if (!editor) return;
+//     const sync = () => setAlignValue(getActiveAlign());
+//     sync();
+//     editor.on('selectionUpdate', sync);
+//     return () => editor.off('selectionUpdate', sync);
+//   }, [editor]);
+
+//   const setAlign = (e) => {
+//     const v = e.target.value;
+//     if (!editor) return;
+
+//     editor
+//       .chain()
+//       .focus()
+//       .command(({ state, commands }) => {
+//         // if paragraph contains hardBreaks, split into real paragraphs so align affects only “current line”
+//         const { $from } = state.selection;
+//         const parent = $from.parent;
+//         if (parent?.type?.name === 'paragraph') {
+//           let hasHardBreak = false;
+//           parent.descendants((n) => {
+//             if (n.type.name === 'hardBreak') { hasHardBreak = true; return false; }
+//             return true;
+//           });
+//           if (hasHardBreak) {
+//             commands.splitBlock();
+//           }
+//         }
+//         return true;
+//       })
+//       .setTextAlign(v)
+//       .run();
+
+//     setAlignValue(v);
+//   };
+
+//   /* ---------- submit & draft ---------- */
+//   const handleSubmit = async () => {
+//     if (publishing) return;
+//     if (!editor) return;
+
+//     const body = editor.getHTML();
+//     const bodyText = body.replace(/<[^>]*>?/gm, '').trim();
+
+//     if (!title.trim() || !bodyText) {
+//       alert('Title and body are required');
+//       return;
+//     }
+
+//     setPublishing(true);
+
+//     try {
+//       const ts = Date.now();
+//       const payload = {
+//         title,
+//         body,
+//         tags,
+//         coverUrl: coverURL || '',
+//         authorId: currentUser.uid,
+//         createdAt: ts,
+//         updatedAt: ts,
+//       };
+
+//       let artId;
+//       if (isEdit && !isDraftMode) {
+//         await updateArticle(id, payload);
+//         artId = id;
+//       } else {
+//         const res = await createArticle(payload);
+//         artId = res.id;
+//         if (isDraftMode) await deleteDraft(currentUser.uid, id);
+//       }
+
+//       await Promise.all(
+//         tags.map(async t => {
+//           const refDoc = doc(fsDb, 'tags', t);
+//           await setDoc(refDoc, { count: increment(1), updatedAt: serverTimestamp() }, { merge: true });
+//         })
+//       );
+
+//       nav(`/article/${artId}`);
+//     } catch (e) {
+//       console.error(e);
+//       alert('Something went wrong, please try again.');
+//       setPublishing(false);
+//     }
+//   };
+
+//   const handleSaveDraft = async () => {
+//     if (!currentUser) { alert('Please sign in first.'); return; }
+//     if (!editor) return;
+
+//     try {
+//       const body = editor.getHTML();
+//       const ts = Date.now();
+//       const draftPayload = {
+//         userId: currentUser.uid,
+//         title: title || '(untitled)',
+//         body,
+//         tags,
+//         coverUrl: coverURL || '',
+//         status: 'draft',
+//         createdAt: ts,
+//         updatedAt: ts,
+//       };
+
+//       if (isEdit && isDraftMode) await updateDraft(currentUser.uid, id, draftPayload);
+//       else await createDraft(currentUser.uid, draftPayload);
+
+//       alert('Draft saved.');
+//     } catch (e) {
+//       console.error('Draft save error:', e);
+//       alert('Could not save draft. Please try again.');
+//     }
+//   };
+
+//   const handleDelete = async () => {
+//     if (!isEdit) return;
+//     const ok = window.confirm('Delete this article permanently?');
+//     if (!ok) return;
+
+//     try {
+//       if (isDraftMode) {
+//         await deleteDraft(currentUser.uid, id);
+//         alert('Draft deleted.');
+//         nav('/profile');
+//       } else {
+//         await rtdbRemove(rtdbRef(rtdb, `articles/${id}`));
+//         alert('Article deleted.');
+//         nav('/');
+//       }
+//     } catch {
+//       alert('Failed to delete. Try again.');
+//     }
+//   };
+
+//   const dateString = useMemo(() => {
+//     const now = new Date();
+//     const opts = { year: 'numeric', month: 'long', day: 'numeric' };
+//     return now.toLocaleDateString(undefined, opts);
+//   }, []);
+
+//   const setImageSize = (sizeKey) => {
+//     if (!editor?.isActive('image')) return;
+//     const key = sizeKey === 'sm' || sizeKey === 'lg' ? sizeKey : 'md';
+//     editor.chain().focus().updateAttributes('image', { 'data-size': key }).run();
+//   };
+
+//   const userName =
+//     userDoc?.fullName ||
+//     userDoc?.name ||
+//     currentUser?.displayName ||
+//     'User';
+
+//   const userRole =
+//     userDoc?.role ||
+//     userDoc?.jobTitle ||
+//     userDoc?.designation ||
+//     null;
+
+//   const userPhoto =
+//     userDoc?.avatarUrl ||
+//     currentUser?.photoURL ||
+//     null;
+
+//   const HIGHLIGHT_COLORS = [
+//     { key: 'red', label: 'Red', color: '#F7B2B0' },
+//     { key: 'yellow', label: 'Yellow', color: '#F8E08E' },
+//     { key: 'blue', label: 'Blue', color: '#AFCBFF' },
+//     { key: 'green', label: 'Green', color: '#B8E6C2' },
+//     { key: 'grey', label: 'Grey', color: '#D9D9D9' },
+//   ];
+
+//   /* ---------- load article/draft ---------- */
+//   useEffect(() => {
+//     if (!isEdit || !editor) return;
+
+//     const setFrom = (obj) => {
+//       setTitle(obj.title || '');
+//       setTags(obj.tags || []);
+//       setCoverURL(obj.coverUrl || null);
+//       editor.commands.setContent(obj.body || '<p></p>');
+//       // after setting content, cover will be synced via syncCoverFromDoc()
+//     };
+
+//     if (isDraftMode) {
+//       getDraftOnce(currentUser.uid, id).then(draft => {
+//         if (!draft) { nav('/profile'); return; }
+//         setFrom(draft);
+//       });
+//     } else {
+//       rtdbGet(rtdbRef(rtdb, `articles/${id}`)).then(snap => {
+//         if (!snap.exists()) { nav('/'); return; }
+//         setFrom(snap.val());
+//       });
+//     }
+//   }, [id, isEdit, isDraftMode, nav, editor, currentUser]);
+
+//   return (
+//     <div style={{ backgroundColor: '#F1F1E6' }}>
+//       <MDBContainer className="write-wrap py-4">
+//         <div className="write-topbar bounded mb-4">
+//           <Link to="/" className="topbar-link">
+//             <MDBIcon fas icon="arrow-left" className="me-2" /> back to home
+//           </Link>
+//           {isEdit && (
+//             <button type="button" className="topbar-delete-btn" onClick={handleDelete}>
+//               <MDBIcon fas icon="trash-alt" className="me-2" /> {isDraftMode ? 'delete draft' : 'delete article'}
+//             </button>
+//           )}
+//         </div>
+
+//         <div className="bounded">
+//           <MDBRow className="justify-content-center">
+//             <MDBCol md="10" lg="9">
+//               {/* ===================== META ===================== */}
+//               <div className="write-meta grid mt-2 write-meta--figma">
+//                 <div className="title-col">
+//                   <div className="write-date">{dateString}</div>
+//                   <input
+//                     className="title-input"
+//                     placeholder="TITLE"
+//                     value={title}
+//                     onChange={e => setTitle(e.target.value)}
+//                   />
+
+//                   <div className="tag-suggest tag-suggest--grid mt-3">
+//                     {suggestedTags.map(({ name, label }) => {
+//                       const active = tags.includes(name);
+//                       return (
+//                         <button
+//                           type="button"
+//                           key={name}
+//                           className={`chip ${active ? 'chip-filled' : 'chip-outline'}`}
+//                           onClick={() => (active ? removeTag(name) : addTag(name))}
+//                           title={`${active ? 'Remove' : 'Add'} #${name}`}
+//                           aria-pressed={active}
+//                         >
+//                           #{label}
+//                         </button>
+//                       );
+//                     })}
+//                   </div>
+//                 </div>
+
+//                 <div className="meta-divider" aria-hidden />
+
+//                 <div className="cover-col">
+//                   <div className="cover-circle" title="Your profile">
+//                     {userPhoto ? (
+//                       <img src={userPhoto} alt="Profile" />
+//                     ) : (
+//                       <div className="cover-empty">
+//                         <i className="far fa-user" />
+//                         <span>Profile</span>
+//                       </div>
+//                     )}
+//                   </div>
+
+//                   <div className="profile-meta">
+//                     <div style={{ fontWeight: 600, fontSize: 16 }}>{userName}</div>
+//                     <div style={{ opacity: 0.75, fontSize: 14, fontWeight: 400 }}>{userRole}</div>
+//                   </div>
+//                 </div>
+//               </div>
+
+//               {/* ===== Editor ===== */}
+//               <div className="editor-shell mt-5">
+//                 <div
+//                   className="editor-canvas transparent"
+//                   onClick={() => editor?.chain().focus().run()}
+//                   role="textbox"
+//                   aria-label="Article body editor"
+//                 >
+//                   {!isFocused && isEmpty && (
+//                     <div className="editor-placeholder" aria-hidden="true">
+//                       Write your article here…
+//                     </div>
+//                   )}
+
+//                   <EditorContent editor={editor} />
+//                 </div>
+
+//                 {/* ===== Toolbar ===== */}
+//                 <div className="editor-toolbar bottom shadow-soft">
+//                   <ToolbarButton title="Bold" icon="bold"
+//                     active={editor?.isActive('bold')}
+//                     onClick={() => editor?.chain().focus().toggleBold().run()} />
+
+//                   <ToolbarButton title="Italic" icon="italic"
+//                     active={editor?.isActive('italic')}
+//                     onClick={() => editor?.chain().focus().toggleItalic().run()} />
+
+//                   <ToolbarButton title="Underline" icon="underline"
+//                     active={editor?.isActive('underline')}
+//                     onClick={() => editor?.chain().focus().toggleUnderline().run()} />
+
+//                   <ToolbarButton title="Strikethrough" icon="strikethrough"
+//                     active={editor?.isActive('strike')}
+//                     onClick={() => editor?.chain().focus().toggleStrike().run()} />
+
+//                   <label className="tb-color" title="Text color">
+//                     <input
+//                       type="color"
+//                       onChange={e => editor?.chain().focus().setColor(e.target.value).run()}
+//                     />
+//                   </label>
+
+//                   {/* ✅ Highlight dropdown */}
+//                   <button
+//                     type="button"
+//                     ref={hlBtnRef}
+//                     className={`tb-btn tb-highlight${editor?.isActive('highlight') ? ' is-active' : ''}`}
+//                     title="Highlight"
+//                     onClick={() => setHlOpen(v => !v)}
+//                     aria-expanded={hlOpen}
+//                     aria-haspopup="menu"
+//                   >
+//                     <i className="fas fa-highlighter" />
+//                     <span className="tb-hl-underline" style={{ background: activeHighlightColor }} />
+//                     <i className="fas fa-caret-down tb-caret" />
+//                   </button>
+
+//                   <button
+//                     type="button"
+//                     ref={emojiBtnRef}
+//                     className="tb-btn"
+//                     title="Emoji"
+//                     onClick={() => setPickerVisible(v => !v)}
+//                     aria-expanded={pickerVisible}
+//                     aria-haspopup="dialog"
+//                   >
+//                     <i className="fas fa-smile" />
+//                   </button>
+
+//                   <span className="tb-sep" />
+
+//                   {/* Block type dropdown */}
+//                   <div className="tb-dd">
+//                     <select
+//                       className="tb-select tb-select--icon"
+//                       aria-label="Block type"
+//                       value={
+//                         editor?.isActive('heading', { level: 1 }) ? 'h1' :
+//                         editor?.isActive('heading', { level: 2 }) ? 'h2' :
+//                         editor?.isActive('heading', { level: 3 }) ? 'h3' : 'p'
+//                       }
+//                       onMouseDown={rememberSelection}
+//                       onChange={setBlockType}
+//                     >
+//                       <option value="p">¶</option>
+//                       <option value="h1">H1</option>
+//                       <option value="h2">H2</option>
+//                       <option value="h3">H3</option>
+//                     </select>
+//                     <i className="fas fa-caret-down tb-dd-caret" />
+//                   </div>
+
+//                   <span className="tb-sep" />
+
+//                   {/* ✅ Lists */}
+//                   <div className="tb-dd" title="Lists">
+//                     <select
+//                       className="tb-select tb-select--icon"
+//                       aria-label="Lists"
+//                       value={listValue}
+//                       onChange={setListType}
+//                     >
+//                       <option value="none">≡</option>
+//                       <option value="bullet">•</option>
+//                       <option value="ordered">1.</option>
+//                       {/* <option value="task">☑</option> */}
+//                     </select>
+//                     <i className="fas fa-caret-down tb-dd-caret" />
+//                   </div>
+
+//                   <span className="tb-sep" />
+
+//                   {/* ✅ Align */}
+//                   <div className="tb-dd" title="Align">
+//                     <select
+//                       className="tb-select tb-select--icon"
+//                       aria-label="Align"
+//                       value={alignValue}
+//                       onChange={setAlign}
+//                     >
+//                       <option value="left">L</option>
+//                       <option value="center">C</option>
+//                       <option value="right">R</option>
+//                     </select>
+//                     <i className="fas fa-caret-down tb-dd-caret" />
+//                   </div>
+
+//                   <span className="tb-sep" />
+
+//                   {/* Insert Image */}
+//                   <div className="tb-dd" title="InsertImage">
+//                     <button type="button" className="tb-btn" 
+//                       onClick={() => {
+//                           if (!editor) return;
+                      
+//                           // ✅ If an image is selected, move cursor out of it BEFORE picking a file
+//                           if (editor.isActive('image')) {
+//                             editor.chain().focus().createParagraphNear().run();
+//                           } else {
+//                             editor.chain().focus().run();
+//                           }
+                      
+//                           imgInputRef.current?.click();
+//                         }}                    >
+//                       <i className="fas fa-image" />
+//                     </button>
+//                   </div>
+
+//                   <span className="tb-sep" />
+
+//                   <button
+//                     type="button"
+//                     ref={moreBtnRef}
+//                     className="tb-btn tb-plus"
+//                     title="More"
+//                     onClick={() => setMoreOpen(o => !o)}
+//                     aria-expanded={moreOpen}
+//                     aria-haspopup="menu"
+//                   >
+//                     <i className="fas fa-plus" />
+//                   </button>
+//                 </div>
+
+//                 {/* Hidden inputs for uploads */}
+//                 <input ref={imgInputRef} type="file" hidden accept="image/*" onChange={handleImgUpload} />
+//                 <input ref={fileInputRef} type="file" hidden onChange={handleFileAttach} />
+
+//                 {/* ✅ Highlight menu (PORTAL) */}
+//                 {hlOpen && createPortal(
+//                   <div
+//                     ref={hlPanelRef}
+//                     className="tb-hl-panel"
+//                     style={{ position: 'absolute', top: hlPos.top, left: hlPos.left, zIndex: 9999 }}
+//                     role="menu"
+//                   >
+//                     {HIGHLIGHT_COLORS.map(c => (
+//                       <button
+//                         key={c.key}
+//                         className="tb-hl-item"
+//                         onClick={() => applyHighlightColor(c.color)}
+//                       >
+//                         <span className="tb-hl-swatch" style={{ background: c.color }} />
+//                         <span>{c.label}</span>
+//                       </button>
+//                     ))}
+
+//                     <div className="tb-divider" />
+
+//                     <button className="tb-hl-item tb-hl-remove" onClick={removeHighlightFromSelection}>
+//                       <i className="fas fa-eraser" />
+//                       <span>Remove highlight</span>
+//                     </button>
+
+//                     <div className="tb-hl-note">
+//                       Highlights apply only when text is selected.
+//                     </div>
+//                   </div>,
+//                   document.body
+//                 )}
+
+//                 {/* Emoji picker (PORTAL) */}
+//                 {pickerVisible && createPortal(
+//                   <div
+//                     ref={emojiPanelRef}
+//                     className="emoji-all-pop"
+//                     style={{ position: 'absolute', top: emojiPos.top, left: emojiPos.left, zIndex: 9999 }}
+//                     role="dialog"
+//                     aria-modal="true"
+//                   >
+//                     <Picker
+//                       data={emojiData}
+//                       onEmojiSelect={handleEmojiSelect}
+//                       theme="light"
+//                       navPosition="bottom"
+//                       previewPosition="none"
+//                       searchPosition="top"
+//                       perLine={8}
+//                     />
+//                   </div>,
+//                   document.body
+//                 )}
+
+//                 {/* “+ More” panel (PORTAL) */}
+//                 {moreOpen && createPortal(
+//                   <div
+//                     ref={morePanelRef}
+//                     className="tb-more-panel"
+//                     style={{ position: 'absolute', top: morePos.top, left: morePos.left, zIndex: 9999 }}
+//                     role="menu"
+//                   >
+//                     <button className="tb-item" onClick={addLink}>
+//                       <i className="fas fa-link" /><span>Insert link</span>
+//                     </button>
+//                     <button className="tb-item" onClick={removeLink}>
+//                       <i className="fas fa-unlink" /><span>Remove link</span>
+//                     </button>
+
+//                     <button className="tb-item" onClick={() => fileInputRef.current?.click()}>
+//                       <i className="fas fa-file" /><span>Attach file</span>
+//                     </button>
+
+//                     <button className="tb-item" onClick={insertYouTube}>
+//                       <i className="fas fa-video" /><span>Insert YouTube</span>
+//                     </button>
+//                     <button className="tb-item" onClick={insertHR}>
+//                       <i className="fas fa-minus" /><span>Horizontal rule</span>
+//                     </button>
+
+//                     <div className="tb-divider" />
+
+//                     <button className="tb-item" onClick={clearFormatting}>
+//                       <i className="fas fa-eraser" /><span>Clear formatting</span>
+//                     </button>
+//                     <button className="tb-item" onClick={() => editor?.chain().focus().undo().run()}>
+//                       <i className="fas fa-undo" /><span>Undo</span>
+//                     </button>
+//                     <button className="tb-item" onClick={() => editor?.chain().focus().redo().run()}>
+//                       <i className="fas fa-redo" /><span>Redo</span>
+//                     </button>
+//                   </div>,
+//                   document.body
+//                 )}
+
+//                 {/* image bubble tools */}
+//                 {editor && (
+//                   <BubbleMenu
+//                     editor={editor}
+//                     shouldShow={({ editor }) => editor.isActive('image')}
+//                     tippyOptions={{ duration: 0 }}
+//                   >
+//                     <div className="bubble-tools">
+//                       <MDBBtn type="button" size="sm" color="light"
+//                         onClick={() => setImageSize('sm')} title="Small image">
+//                         S
+//                       </MDBBtn>
+//                       <MDBBtn type="button" size="sm" color="light"
+//                         onClick={() => setImageSize('md')} title="Medium image">
+//                         M
+//                       </MDBBtn>
+//                       <MDBBtn type="button" size="sm" color="light"
+//                         onClick={() => setImageSize('lg')} title="Large image">
+//                         L
+//                       </MDBBtn>
+
+//                       <MDBBtn type="button" size="sm" color="light"
+//                         onClick={() => document.getElementById('img-edit-upload').click()}
+//                         title="Replace image">
+//                         <MDBIcon fas icon="pencil-alt" />
+//                       </MDBBtn>
+
+//                       <MDBBtn
+//                         type="button"
+//                         size="sm"
+//                         color="light"
+//                         onClick={() => {
+//                           const sel = editor?.state?.selection;
+//                           const node = sel?.node;
+//                           const src = node?.type?.name === 'image' ? node.attrs?.src : null;
+//                           const wasCover = node?.attrs?.['data-cover'] === '1';
+
+//                           editor.chain().focus().deleteSelection().run();
+
+//                           // if deleted cover, clear coverURL (transaction sync will handle)
+//                           if (wasCover && src && src === coverURL) {
+//                             setCoverURL(null);
+//                           }
+
+//                           // back to typing
+//                           editor.chain().focus().createParagraphNear().run();
+//                         }}
+//                         title="Delete image"
+//                       >
+//                         <MDBIcon fas icon="trash" />
+//                       </MDBBtn>
+//                     </div>
+//                   </BubbleMenu>
+//                 )}
+
+//                 <input
+//                   id="img-edit-upload"
+//                   hidden
+//                   type="file"
+//                   accept="image/*"
+//                   onChange={handleReplaceSelectedImage}
+//                 />
+//               </div>
+
+//               {/* ===== Actions ===== */}
+//               <div className="write-actions mt-5" aria-label="article actions">
+//                 <button type="button" className="btn-preview pill-btn" onClick={() => setPreviewOpen(true)}>
+//                   Preview
+//                 </button>
+//                 <button type="button" className="btn-publish pill-btn" disabled={publishing} onClick={handleSubmit}>
+//                   {publishing ? (<><MDBSpinner size="sm" tag="span" className="me-2" role="status" />Publishing…</>) : 'PUBLISH'}
+//                 </button>
+//                 <div className="save-row">
+//                   <button type="button" className="save-draft-link" onClick={handleSaveDraft}>Save as Draft</button>
+//                 </div>
+//               </div>
+//             </MDBCol>
+//           </MDBRow>
+//         </div>
+//       </MDBContainer>
+
+//       <PreviewOverlay
+//         open={previewOpen}
+//         onClose={() => setPreviewOpen(false)}
+//         onPublish={handleSubmit}
+//         title={title}
+//         tags={tags}
+//         coverUrl={coverURL}
+//         bodyHTML={editor?.getHTML?.() || ''}
+//       />
+//     </div>
+//   );
+// }
+
+// /* ---------- Preview overlay ---------- */
+// function PreviewOverlay({ open, onClose, onPublish, title, tags, coverUrl, bodyHTML }) {
+//   if (!open) return null;
+
+//   return (
+//     <div className="preview-overlay" role="dialog" aria-modal="true">
+//       <div className="preview-panel">
+//         <div className="preview-header">
+//           <div className="preview-cover">
+//             {coverUrl ? (
+//               <img src={coverUrl} alt="Cover" />
+//             ) : (
+//               <div className="preview-cover--empty">
+//                 <i className="far fa-image" />
+//               </div>
+//             )}
+//           </div>
+
+//           <div className="preview-meta">
+//             <h1 className="preview-title">{title || 'Untitled'}</h1>
+
+//             {Array.isArray(tags) && tags.length > 0 && (
+//               <div className="preview-tags">
+//                 {tags.map(t => (
+//                   <span key={t} className="chip chip-outline">#{t}</span>
+//                 ))}
+//               </div>
+//             )}
+
+//             <div
+//               className="preview-body"
+//               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(bodyHTML || '') }}
+//             />
+//           </div>
+//         </div>
+
+//         <div className="preview-actions">
+//           <button type="button" className="btn-preview pill-btn" onClick={onClose}>Back</button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+//above code is working completely before cost cutting
+
+//WriteArticle where people can write and publish
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useUserDoc } from '../../configs/user';
-import { createArticle, updateArticle } from '../../configs/useArticles';
 import {
+  createArticle,
+  updateArticle,
+  deleteArticle,
   createDraft,
   updateDraft,
   deleteDraft,
   getDraftOnce,
 } from '../../configs/useArticles';
-import { ref as rtdbRef, get as rtdbGet, remove as rtdbRemove } from 'firebase/database';
+import { getArticleWithBodyOnce } from '../../configs/articles';
+import { ref as rtdbRef, get as rtdbGet } from 'firebase/database';
 import { rtdb, db as fsDb, storage } from '../../configs/firebase';
 import {
-  doc, setDoc, collection, onSnapshot,
-  serverTimestamp, increment,
+  doc,
+  setDoc,
+  collection,
+  onSnapshot,
+  serverTimestamp,
+  increment,
 } from 'firebase/firestore';
-import { uploadBytes, getDownloadURL, ref as sRef } from 'firebase/storage';
+import {
+  uploadBytes,
+  getDownloadURL,
+  ref as sRef,
+  deleteObject,
+} from 'firebase/storage';
 import DOMPurify from 'dompurify';
 
 import '../../styles/writearticlepage.css';
@@ -9107,14 +10591,28 @@ import Image from '@tiptap/extension-image';
 import Youtube from '@tiptap/extension-youtube';
 import TextAlign from '@tiptap/extension-text-align';
 import { TextSelection } from 'prosemirror-state';
-// ✅ Checkbox list (Task list)
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 
 import Picker from '@emoji-mart/react';
 import emojiData from '@emoji-mart/data';
 
-import { MDBContainer, MDBRow, MDBCol, MDBBtn, MDBIcon, MDBSpinner } from 'mdb-react-ui-kit';
+import {
+  MDBContainer,
+  MDBRow,
+  MDBCol,
+  MDBBtn,
+  MDBIcon,
+  MDBSpinner,
+} from 'mdb-react-ui-kit';
+
+const MAX_TITLE_CHARS = 120;
+const MAX_TAGS = 4;
+const MAX_ARTICLE_IMAGES = 3;
+const MAX_BODY_TEXT_CHARS = 12000;
+const MAX_BODY_HTML_BYTES = 200 * 1024;
+const MAX_COMPRESSED_IMAGE_BYTES = 700 * 1024;
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 /* ---------- tiny button primitive for the toolbar ---------- */
 function ToolbarButton({ title, icon, onClick, active, disabled, children }) {
@@ -9152,6 +10650,7 @@ export default function WriteArticle() {
   const [tags, setTags] = useState([]);
 
   const [coverURL, setCoverURL] = useState(null);
+  const [imageUploading, setImageUploading] = useState(false);
 
   const [isEmpty, setIsEmpty] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
@@ -9159,19 +10658,22 @@ export default function WriteArticle() {
   const imgInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // “+ More” panel (portaled)
+  /*
+   * Critical cover fallback.
+   * This prevents coverUrl from becoming empty when TipTap state sync is late.
+   */
+  const coverUrlRef = useRef('');
+
   const [moreOpen, setMoreOpen] = useState(false);
   const moreBtnRef = useRef(null);
   const morePanelRef = useRef(null);
   const [morePos, setMorePos] = useState({ top: 0, left: 0 });
 
-  // Emoji picker (portaled)
   const [pickerVisible, setPickerVisible] = useState(false);
   const emojiBtnRef = useRef(null);
   const emojiPanelRef = useRef(null);
   const [emojiPos, setEmojiPos] = useState({ top: 0, left: 0 });
 
-  // ✅ Highlight dropdown (portaled)
   const [hlOpen, setHlOpen] = useState(false);
   const hlBtnRef = useRef(null);
   const hlPanelRef = useRef(null);
@@ -9191,6 +10693,7 @@ export default function WriteArticle() {
         const raw = d.id || '';
         const key = raw.trim().toLowerCase();
         if (!key) return;
+
         const count = d.data().count || 0;
 
         if (!map.has(key)) map.set(key, { name: key, label: raw, count });
@@ -9207,16 +10710,10 @@ export default function WriteArticle() {
     return () => unsub();
   }, [currentUser]);
 
-  /* =========================================================
-     ✅ Non-sticky highlight (selection only)
-     ========================================================= */
   const NonInclusiveHighlight = Highlight.extend({
     inclusive: false,
   }).configure({ multicolor: true });
 
-  /* =========================================================
-     ✅ Image with cover UI (NodeView)
-     ========================================================= */
   const CoverImage = useMemo(() => {
     return Image.extend({
       addAttributes() {
@@ -9238,7 +10735,7 @@ export default function WriteArticle() {
             renderHTML: attrs => (attrs['data-id'] ? { 'data-id': attrs['data-id'] } : {}),
           },
           'data-cover': {
-            default: null, // "1"
+            default: null,
             parseHTML: el => el.getAttribute('data-cover'),
             renderHTML: attrs => (attrs['data-cover'] ? { 'data-cover': attrs['data-cover'] } : {}),
           },
@@ -9253,6 +10750,8 @@ export default function WriteArticle() {
           const img = document.createElement('img');
           img.className = 'article-img';
           img.setAttribute('src', node.attrs.src);
+          img.setAttribute('loading', 'lazy');
+          img.setAttribute('decoding', 'async');
           if (node.attrs.alt) img.setAttribute('alt', node.attrs.alt);
 
           if (node.attrs['data-size']) img.setAttribute('data-size', node.attrs['data-size']);
@@ -9271,31 +10770,47 @@ export default function WriteArticle() {
           btn.className = 'article-img-cover-btn';
           btn.textContent = 'Update this image as your cover photo';
 
-          btn.addEventListener('mousedown', (e) => {
+          btn.addEventListener('mousedown', e => {
             e.preventDefault();
             e.stopPropagation();
           });
 
-          btn.addEventListener('click', (e) => {
+          btn.addEventListener('click', e => {
             e.preventDefault();
             e.stopPropagation();
 
             const pos = typeof getPos === 'function' ? getPos() : null;
             if (pos == null) return;
 
+            let nextCover = '';
+
             editor.commands.command(({ state, tr }) => {
-              // clear all covers, set this one
               state.doc.descendants((n, p) => {
                 if (n.type.name !== 'image') return;
-                const next = (p === pos) ? '1' : null;
+
+                const isThisImage = p === pos;
+                const next = isThisImage ? '1' : null;
+
+                if (isThisImage && n.attrs.src) {
+                  nextCover = n.attrs.src;
+                }
+
                 if (n.attrs['data-cover'] !== next) {
-                  tr.setNodeMarkup(p, undefined, { ...n.attrs, 'data-cover': next });
+                  tr.setNodeMarkup(p, undefined, {
+                    ...n.attrs,
+                    'data-cover': next,
+                  });
                 }
               });
+
               return true;
             });
 
-            // move cursor to typing position (so button click doesn’t “stick” on image)
+            if (nextCover) {
+              coverUrlRef.current = nextCover;
+              setCoverURL(nextCover);
+            }
+
             editor.chain().focus().createParagraphNear().run();
           });
 
@@ -9308,18 +10823,13 @@ export default function WriteArticle() {
           const setUIState = (n, selected) => {
             const isCover = n.attrs['data-cover'] === '1';
 
-            // orange border when selected and not cover
             if (selected && !isCover) wrap.classList.add('is-selected');
             else wrap.classList.remove('is-selected');
 
-            // label visible only if cover
             label.style.display = isCover ? 'block' : 'none';
-
-            // button visible only when selected and not cover
-            btn.style.display = (selected && !isCover) ? 'inline-flex' : 'none';
+            btn.style.display = selected && !isCover ? 'inline-flex' : 'none';
           };
 
-          // initial state
           setUIState(node, false);
 
           return {
@@ -9329,16 +10839,18 @@ export default function WriteArticle() {
             selectNode() {
               setUIState(node, true);
             },
+
             deselectNode() {
               setUIState(node, false);
             },
+
             update(updatedNode) {
               if (updatedNode.type.name !== 'image') return false;
 
-              // update node reference + attrs
               node = updatedNode;
 
               img.setAttribute('src', node.attrs.src);
+
               if (node.attrs['data-size']) img.setAttribute('data-size', node.attrs['data-size']);
               else img.removeAttribute('data-size');
 
@@ -9348,8 +10860,10 @@ export default function WriteArticle() {
               if (node.attrs['data-cover']) img.setAttribute('data-cover', node.attrs['data-cover']);
               else img.removeAttribute('data-cover');
 
-              // keep UI synced (selection status comes from PM calling select/deselect)
-              const isSelected = wrap.classList.contains('ProseMirror-selectednode') || wrap.classList.contains('is-selected');
+              const isSelected =
+                wrap.classList.contains('ProseMirror-selectednode') ||
+                wrap.classList.contains('is-selected');
+
               setUIState(node, isSelected);
 
               return true;
@@ -9357,12 +10871,15 @@ export default function WriteArticle() {
           };
         };
       },
-    }).configure({ allowBase64: true });
+    }).configure({ allowBase64: false });
   }, []);
 
-  /* =========================================================
-     ✅ Editor
-     ========================================================= */
+  const hasBase64Images = html => {
+  if (!html || typeof html !== 'string') return false;
+
+  return /<img[^>]+src=["']data:image\//i.test(html);
+};
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -9372,7 +10889,10 @@ export default function WriteArticle() {
       TextStyle,
       Color,
       NonInclusiveHighlight,
-      LinkExt.configure({ openOnClick: false, HTMLAttributes: { rel: 'noopener nofollow' } }),
+      LinkExt.configure({
+        openOnClick: false,
+        HTMLAttributes: { rel: 'noopener nofollow' },
+      }),
       CoverImage,
       Youtube.configure({ inline: false, width: 640 }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -9380,117 +10900,186 @@ export default function WriteArticle() {
       TaskItem.configure({ nested: true }),
     ],
     content: '<p></p>',
-     
-     editorProps: {
-    handleTextInput(view, from, to, text) {
-      const { state } = view;
-      const sel = state.selection;
 
-      // ✅ If an image is selected, typing must NOT replace it
-      if (sel?.node && sel.node.type.name === 'image') {
-        const after = sel.from + sel.node.nodeSize;
+    editorProps: {
+      handleTextInput(view, from, to, text) {
+        const { state } = view;
+        const sel = state.selection;
 
-        // Move cursor AFTER image
-        const tr = state.tr.setSelection(
-          TextSelection.create(state.doc, after)
-        );
-
-        view.dispatch(tr);
-
-        // Insert typed text safely
-        view.dispatch(view.state.tr.insertText(text));
-
-        return true; // handled
-      }
-
-      return false;
-    },
-
-    handleKeyDown(view, event) {
-      const { state } = view;
-      const sel = state.selection;
-
-      if (sel?.node && sel.node.type.name === 'image') {
-        const isPrintable =
-          event.key.length === 1 &&
-          !event.ctrlKey &&
-          !event.metaKey &&
-          !event.altKey;
-
-        // ✅ Typing should move cursor, not delete image
-        if (isPrintable) {
-          event.preventDefault();
-
+        if (sel?.node && sel.node.type.name === 'image') {
           const after = sel.from + sel.node.nodeSize;
-          view.dispatch(
-            state.tr.setSelection(TextSelection.create(state.doc, after))
-          );
+          const tr = state.tr.setSelection(TextSelection.create(state.doc, after));
 
-          view.dispatch(view.state.tr.insertText(event.key));
+          view.dispatch(tr);
+          view.dispatch(view.state.tr.insertText(text));
+
           return true;
         }
 
-        // ✅ Block Backspace/Delete (only toolbar delete allowed)
-        if (event.key === 'Backspace' || event.key === 'Delete') {
-          event.preventDefault();
-          return true;
-        }
-      }
+        return false;
+      },
 
-      return false;
+      handleKeyDown(view, event) {
+        const { state } = view;
+        const sel = state.selection;
+
+        if (sel?.node && sel.node.type.name === 'image') {
+          const isPrintable =
+            event.key.length === 1 &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !event.altKey;
+
+          if (isPrintable) {
+            event.preventDefault();
+
+            const after = sel.from + sel.node.nodeSize;
+            view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, after)));
+            view.dispatch(view.state.tr.insertText(event.key));
+
+            return true;
+          }
+
+          if (event.key === 'Backspace' || event.key === 'Delete') {
+            event.preventDefault();
+            return true;
+          }
+        }
+
+        return false;
+      },
     },
-  },
-   
-
 
     onCreate({ editor }) {
       const hasText = editor.state.doc.textContent.trim().length > 0;
       let hasAnyImage = false;
-      editor.state.doc.descendants((node) => {
-        if (node.type.name === 'image') { hasAnyImage = true; return false; }
+
+      editor.state.doc.descendants(node => {
+        if (node.type.name === 'image') {
+          hasAnyImage = true;
+          return false;
+        }
+
         return true;
       });
+
       setIsEmpty(!hasText && !hasAnyImage);
     },
+
     onUpdate({ editor }) {
       const hasText = editor.state.doc.textContent.trim().length > 0;
       let hasAnyImage = false;
-      editor.state.doc.descendants((node) => {
-        if (node.type.name === 'image') { hasAnyImage = true; return false; }
+
+      editor.state.doc.descendants(node => {
+        if (node.type.name === 'image') {
+          hasAnyImage = true;
+          return false;
+        }
+
         return true;
       });
+
       setIsEmpty(!hasText && !hasAnyImage);
     },
   });
 
-  /* ---------- keep coverURL always in sync with doc ---------- */
+  const getCoverUrlFromEditor = useCallback(() => {
+    let selectedCover = '';
+    let firstDocImage = '';
+    let firstHtmlImage = '';
+
+    if (editor) {
+      editor.state.doc.descendants(node => {
+        if (node.type.name !== 'image') return true;
+
+        const src = node.attrs?.src || '';
+
+        if (!firstDocImage && src) {
+          firstDocImage = src;
+        }
+
+        if (node.attrs?.['data-cover'] === '1' && src) {
+          selectedCover = src;
+          return false;
+        }
+
+        return true;
+      });
+
+      try {
+        const html = editor.getHTML();
+        const parser = new DOMParser();
+        const parsed = parser.parseFromString(html, 'text/html');
+        firstHtmlImage = parsed.querySelector('img')?.getAttribute('src') || '';
+      } catch {
+        firstHtmlImage = '';
+      }
+    }
+
+    const resolved =
+      selectedCover ||
+      firstDocImage ||
+      firstHtmlImage ||
+      coverUrlRef.current ||
+      coverURL ||
+      '';
+
+    if (resolved) {
+      coverUrlRef.current = resolved;
+    }
+
+    return resolved;
+  }, [editor, coverURL]);
+
   const syncCoverFromDoc = useCallback(() => {
     if (!editor) return;
-    let found = null;
-    editor.state.doc.descendants((node) => {
-      if (node.type.name === 'image' && node.attrs['data-cover'] === '1') {
-        found = node.attrs.src;
+
+    let selectedCover = '';
+    let firstImage = '';
+
+    editor.state.doc.descendants(node => {
+      if (node.type.name !== 'image') return true;
+
+      const src = node.attrs?.src || '';
+
+      if (!firstImage && src) {
+        firstImage = src;
+      }
+
+      if (node.attrs?.['data-cover'] === '1' && src) {
+        selectedCover = src;
         return false;
       }
+
       return true;
     });
-    setCoverURL(found);
+
+    const resolved = selectedCover || firstImage || coverUrlRef.current || '';
+
+    if (resolved) {
+      coverUrlRef.current = resolved;
+      setCoverURL(resolved);
+    }
   }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
+
     syncCoverFromDoc();
     editor.on('transaction', syncCoverFromDoc);
+
     return () => editor.off('transaction', syncCoverFromDoc);
   }, [editor, syncCoverFromDoc]);
 
-  /* ---------- focus/blur (placeholder) ---------- */
   useEffect(() => {
     if (!editor) return;
+
     const onFocus = () => setIsFocused(true);
     const onBlur = () => setIsFocused(false);
+
     editor.on('focus', onFocus);
     editor.on('blur', onBlur);
+
     return () => {
       editor.off('focus', onFocus);
       editor.off('blur', onBlur);
@@ -9498,15 +11087,155 @@ export default function WriteArticle() {
   }, [editor]);
 
   /* ---------- tag helpers ---------- */
+  const normalizeTags = value => {
+    if (Array.isArray(value)) {
+      return value
+        .map(tag => String(tag || '').trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, MAX_TAGS);
+    }
+
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map(tag => tag.trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, MAX_TAGS);
+    }
+
+    return [];
+  };
+
   const addTag = name => {
     const tag = String(name || '').trim().toLowerCase();
-    if (tag && !tags.includes(tag)) setTags(prev => [...prev, tag]);
-  };
-  const removeTag = name => setTags(prev => prev.filter(t => t !== name));
+    if (!tag) return;
 
-  /* ---------- click-away + ESC for portaled panels ---------- */
+    setTags(prev => {
+      const safePrev = normalizeTags(prev);
+
+      if (safePrev.includes(tag)) return safePrev;
+
+      if (safePrev.length >= MAX_TAGS) {
+        alert(`You can add up to ${MAX_TAGS} tags only.`);
+        return safePrev;
+      }
+
+      return [...safePrev, tag];
+    });
+  };
+
+  const removeTag = name => {
+    setTags(prev => normalizeTags(prev).filter(tag => tag !== name));
+  };
+
+  const handleTitleChange = e => {
+    const nextTitle = e.target.value;
+
+    if (nextTitle.length > MAX_TITLE_CHARS) {
+      setTitle(nextTitle.slice(0, MAX_TITLE_CHARS));
+      return;
+    }
+
+    setTitle(nextTitle);
+  };
+
+  const getEditorImageCount = useCallback(() => {
+    if (!editor) return 0;
+
+    let count = 0;
+
+    editor.state.doc.descendants(node => {
+      if (node.type.name === 'image') count += 1;
+      return true;
+    });
+
+    return count;
+  }, [editor]);
+
+  const getBodyHtmlSize = html => {
+    try {
+      return new Blob([html]).size;
+    } catch {
+      return html.length;
+    }
+  };
+
+  const validateArticleLimits = ({ isDraft = false } = {}) => {
+    if (!editor) return false;
+
+         const cleanTitle = title.trim();
+         const body = editor.getHTML();
+     const bodyText = body.replace(/<[^>]*>?/gm, '').trim();
+     const bodyHtmlSize = getBodyHtmlSize(body);
+     const imageCount = getEditorImageCount();
+     
+     if (hasBase64Images(body)) {
+       alert(
+         'Please remove the pasted image and upload it using the image button. Direct pasted images are blocked to reduce database cost.'
+       );
+       return false;
+     }
+
+    if (!isDraft && !cleanTitle) {
+      alert('Title is required.');
+      return false;
+    }
+
+    if (!isDraft && !bodyText) {
+      alert('Article body is required.');
+      return false;
+    }
+
+    if (cleanTitle.length > MAX_TITLE_CHARS) {
+      alert(`Title should be ${MAX_TITLE_CHARS} characters or less.`);
+      return false;
+    }
+
+    if (normalizeTags(tags).length > MAX_TAGS) {
+      alert(`You can add up to ${MAX_TAGS} tags only.`);
+      return false;
+    }
+
+    if (imageCount > MAX_ARTICLE_IMAGES) {
+      alert(`You can upload up to ${MAX_ARTICLE_IMAGES} images per article. One image will be used as the cover image.`);
+      return false;
+    }
+
+    if (bodyText.length > MAX_BODY_TEXT_CHARS) {
+      alert(`Article is too long. Please keep it under ${MAX_BODY_TEXT_CHARS.toLocaleString()} text characters.`);
+      return false;
+    }
+
+    if (bodyHtmlSize > MAX_BODY_HTML_BYTES) {
+      alert('Article formatting/content is too large. Please reduce pasted formatting or extra content.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const findExistingDraft = async () => {
+    if (!currentUser?.uid) return null;
+
+    const snap = await rtdbGet(rtdbRef(rtdb, `drafts/${currentUser.uid}`));
+    if (!snap.exists()) return null;
+
+    let existingDraft = null;
+
+    snap.forEach(childSnap => {
+      if (!existingDraft) {
+        existingDraft = {
+          id: childSnap.key,
+          ...childSnap.val(),
+        };
+      }
+    });
+
+    return existingDraft;
+  };
+
   useEffect(() => {
-    const onDocClick = (e) => {
+    const onDocClick = e => {
       const inMoreBtn = moreBtnRef.current?.contains(e.target);
       const inMorePanel = morePanelRef.current?.contains(e.target);
       if (!inMoreBtn && !inMorePanel) setMoreOpen(false);
@@ -9520,7 +11249,7 @@ export default function WriteArticle() {
       if (!inHlBtn && !inHlPanel) setHlOpen(false);
     };
 
-    const onEsc = (e) => {
+    const onEsc = e => {
       if (e.key === 'Escape') {
         setMoreOpen(false);
         setPickerVisible(false);
@@ -9530,113 +11259,254 @@ export default function WriteArticle() {
 
     document.addEventListener('mousedown', onDocClick);
     document.addEventListener('keydown', onEsc);
+
     return () => {
       document.removeEventListener('mousedown', onDocClick);
       document.removeEventListener('keydown', onEsc);
     };
   }, []);
 
-  /* ---------- portal positions ---------- */
   useEffect(() => {
     const updatePositions = () => {
       if (moreOpen && moreBtnRef.current) {
         const r = moreBtnRef.current.getBoundingClientRect();
-        setMorePos({ top: r.bottom + 8 + window.scrollY, left: r.left + window.scrollX });
+
+        setMorePos({
+          top: r.bottom + 8 + window.scrollY,
+          left: r.left + window.scrollX,
+        });
       }
+
       if (pickerVisible && emojiBtnRef.current) {
         const r = emojiBtnRef.current.getBoundingClientRect();
-        setEmojiPos({ top: r.bottom + 8 + window.scrollY, left: r.left + window.scrollX - 8 });
+
+        setEmojiPos({
+          top: r.bottom + 8 + window.scrollY,
+          left: r.left + window.scrollX - 8,
+        });
       }
+
       if (hlOpen && hlBtnRef.current) {
         const r = hlBtnRef.current.getBoundingClientRect();
-        setHlPos({ top: r.bottom + 8 + window.scrollY, left: r.left + window.scrollX - 6 });
+
+        setHlPos({
+          top: r.bottom + 8 + window.scrollY,
+          left: r.left + window.scrollX - 6,
+        });
       }
     };
 
     updatePositions();
+
     window.addEventListener('scroll', updatePositions, true);
     window.addEventListener('resize', updatePositions);
+
     return () => {
       window.removeEventListener('scroll', updatePositions, true);
       window.removeEventListener('resize', updatePositions);
     };
   }, [moreOpen, pickerVisible, hlOpen]);
 
-  /* =========================================================
-     ✅ Image upload:
-     1) Insert image
-     2) If it's the first image, auto-set as cover (data-cover="1")
-     3) Immediately return cursor to typing (so image never disappears)
-     ========================================================= */
-  const handleImgUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !editor) return;
+  const loadImageFromFile = file =>
+    new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new window.Image();
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const src = reader.result;
-      const id = `img_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      image.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(image);
+      };
 
-      // do we already have a cover?
-      let hasCover = false;
-      editor.state.doc.descendants((node) => {
-        if (node.type.name === 'image' && node.attrs['data-cover'] === '1') {
-          hasCover = true;
-          return false;
-        }
-        return true;
-      });
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Could not read selected image.'));
+      };
 
-      const attrs = { src, 'data-id': id };
-      if (!hasCover) attrs['data-cover'] = '1'; 
-
-      editor.commands.command(({ state, tr, dispatch }) => {
-      const sel = state.selection;
-
-      // NodeSelection on an image
-      if (sel?.node && sel.node.type?.name === 'image') {
-        const after = sel.from + sel.node.nodeSize;
-        tr.setSelection(TextSelection.create(tr.doc, after));
-      }
-
-      if (dispatch) dispatch(tr);
-      return true;
+      image.src = objectUrl;
     });
-   
-    if (editor.isActive('image')) {
-    editor.chain().focus().createParagraphNear().run();
+
+  const canvasToBlob = (canvas, type, quality) =>
+    new Promise((resolve, reject) => {
+      canvas.toBlob(
+        blob => {
+          if (!blob) {
+            reject(new Error('Image compression failed.'));
+            return;
+          }
+
+          resolve(blob);
+        },
+        type,
+        quality
+      );
+    });
+
+  const compressEditorImage = async file => {
+    if (!file) throw new Error('No image selected.');
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      throw new Error('Only JPG, PNG, and WebP images are allowed.');
     }
 
-      editor
-        .chain()
-        .focus()
-        .setImage(attrs)
-        .createParagraphNear() 
-        .run();
+    const image = await loadImageFromFile(file);
 
-      // if first image was cover, ensure all others are cleared (safety)
-      if (!hasCover) {
-        editor.commands.command(({ state, tr }) => {
-          state.doc.descendants((node, pos) => {
-            if (node.type.name !== 'image') return;
-            const next = (node.attrs.src === src) ? '1' : null;
-            if (node.attrs['data-cover'] !== next) {
-              tr.setNodeMarkup(pos, undefined, { ...node.attrs, 'data-cover': next });
-            }
-          });
-          return true;
+    const maxWidth = 1200;
+    const maxHeight = 900;
+    const ratio = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
+
+    const width = Math.round(image.width * ratio);
+    const height = Math.round(image.height * ratio);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!ctx) throw new Error('Browser does not support image compression.');
+
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const qualities = [0.78, 0.7, 0.62, 0.55];
+
+    for (const quality of qualities) {
+      const blob = await canvasToBlob(canvas, 'image/webp', quality);
+
+      if (blob.size <= MAX_COMPRESSED_IMAGE_BYTES) {
+        return new File([blob], `article-image-${Date.now()}.webp`, {
+          type: 'image/webp',
+          lastModified: Date.now(),
         });
       }
+    }
 
-      e.target.value = '';
-    };
-
-    reader.readAsDataURL(file);
+    throw new Error('Image is still too large after compression. Please choose a smaller image.');
   };
 
-  /* ---------- replace selected image (kept) ---------- */
-  const handleReplaceSelectedImage = (e) => {
+  const uploadEditorImage = async file => {
+    if (!currentUser?.uid) {
+      throw new Error('Please sign in before uploading images.');
+    }
+
+    const optimizedFile = await compressEditorImage(file);
+
+    const path = `article_images/${currentUser.uid}/${Date.now()}_${optimizedFile.name}`;
+    const imageRef = sRef(storage, path);
+
+    await uploadBytes(imageRef, optimizedFile, {
+      contentType: 'image/webp',
+      cacheControl: 'public,max-age=31536000,immutable',
+    });
+
+    return getDownloadURL(imageRef);
+  };
+
+  const deleteStorageFileFromUrl = async url => {
+    if (!url || typeof url !== 'string') return;
+
+    if (!url.includes('firebasestorage.googleapis.com') && !url.startsWith('gs://')) {
+      return;
+    }
+
+    try {
+      const imageRef = sRef(storage, url);
+      await deleteObject(imageRef);
+    } catch (err) {
+      console.warn('Storage image cleanup skipped:', err?.message || err);
+    }
+  };
+
+ const handleImgUpload = async e => {
+  const file = e.target.files?.[0];
+
+  if (!file || !editor) return;
+
+  const currentImages = getEditorImageCount();
+
+  if (currentImages >= MAX_ARTICLE_IMAGES) {
+    alert(`You can upload up to ${MAX_ARTICLE_IMAGES} images per article. One image will be used as the cover image.`);
+    e.target.value = '';
+    return;
+  }
+
+  try {
+    setImageUploading(true);
+
+    const src = await uploadEditorImage(file);
+    const imageId = `img_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+    let hasCover = false;
+
+    editor.state.doc.descendants(node => {
+      if (node.type.name === 'image' && node.attrs?.['data-cover'] === '1') {
+        hasCover = true;
+        return false;
+      }
+
+      return true;
+    });
+
+    const attrs = {
+      src,
+      alt: title?.trim() || 'Article image',
+      'data-id': imageId,
+      ...(hasCover ? {} : { 'data-cover': '1' }),
+    };
+
+    /*
+     * Strong edit-mode fix:
+     * Insert the image directly through ProseMirror transaction.
+     * This does not depend on toolbar/file-picker cursor state.
+     */
+    const { state, view } = editor;
+    const imageNode = state.schema.nodes.image.create(attrs);
+    const paragraphNode = state.schema.nodes.paragraph.create();
+
+    let insertPos = state.selection?.from;
+
+    if (
+      state.selection?.node &&
+      state.selection.node.type?.name === 'image'
+    ) {
+      insertPos = state.selection.from + state.selection.node.nodeSize;
+    }
+
+    if (typeof insertPos !== 'number' || insertPos < 0) {
+      insertPos = state.doc.content.size;
+    }
+
+    let tr = state.tr.insert(insertPos, imageNode);
+
+    const paragraphPos = insertPos + imageNode.nodeSize;
+    tr = tr.insert(paragraphPos, paragraphNode);
+
+    view.dispatch(tr);
+    editor.commands.focus(paragraphPos + 1);
+
+    if (!hasCover) {
+      coverUrlRef.current = src;
+      setCoverURL(src);
+    }
+
+    setTimeout(() => {
+      const resolvedCover = getCoverUrlFromEditor() || src;
+
+      if (resolvedCover) {
+        coverUrlRef.current = resolvedCover;
+        setCoverURL(resolvedCover);
+      }
+    }, 0);
+  } catch (err) {
+    console.error('Image upload failed:', err);
+    alert(err.message || 'Image upload failed. Please try again.');
+  } finally {
+    setImageUploading(false);
+    e.target.value = '';
+  }
+};
+
+  const handleReplaceSelectedImage = async e => {
     const file = e.target.files?.[0];
+
     if (!file || !editor) return;
 
     if (!editor.isActive('image')) {
@@ -9645,57 +11515,93 @@ export default function WriteArticle() {
       return;
     }
 
-    const sel = editor.state.selection;
-    const node = sel?.node;
-    const wasCover = node?.attrs?.['data-cover'] === '1';
+    try {
+      setImageUploading(true);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const newSrc = reader.result;
-      editor.chain().focus().updateAttributes('image', { src: newSrc }).run();
+      const sel = editor.state.selection;
+      const node = sel?.node;
+      const oldSrc = node?.attrs?.src || null;
+      const wasCover = node?.attrs?.['data-cover'] === '1';
 
-      // if replaced image was cover, keep it cover
+      const newSrc = await uploadEditorImage(file);
+
+      editor
+        .chain()
+        .focus()
+        .updateAttributes('image', {
+          src: newSrc,
+          ...(wasCover ? { 'data-cover': '1' } : {}),
+        })
+        .run();
+
       if (wasCover) {
-        editor.commands.command(({ state, tr }) => {
-          state.doc.descendants((n, pos) => {
-            if (n.type.name !== 'image') return;
-            const next = (pos === sel.from) ? '1' : n.attrs['data-cover'];
-            // best-effort: if selection changed, still preserve by src scan
-            return true;
-          });
-          return true;
-        });
+        coverUrlRef.current = newSrc;
+        setCoverURL(newSrc);
       }
 
-      // get cursor back to typing
-      editor.chain().focus().createParagraphNear().run();
-    };
+      deleteStorageFileFromUrl(oldSrc);
 
-    reader.readAsDataURL(file);
-    e.target.value = '';
+      editor.chain().focus().createParagraphNear().run();
+    } catch (err) {
+      console.error('Replace image failed:', err);
+      alert(err.message || 'Could not replace image. Please try again.');
+    } finally {
+      setImageUploading(false);
+      e.target.value = '';
+    }
   };
 
-  /* ---------- toolbar helpers ---------- */
+  const deleteSelectedImage = () => {
+    if (!editor) return;
+
+    const sel = editor.state.selection;
+    const node = sel?.node;
+    const src = node?.type?.name === 'image' ? node.attrs?.src : null;
+    const wasCover = node?.attrs?.['data-cover'] === '1';
+
+    editor.chain().focus().deleteSelection().run();
+
+    if (wasCover && src && src === coverURL) {
+      coverUrlRef.current = '';
+      setCoverURL(null);
+    }
+
+    editor.chain().focus().createParagraphNear().run();
+
+    deleteStorageFileFromUrl(src);
+  };
+
   const rememberSelection = () => {
     if (!editor) return;
+
     const { from, to } = editor.state.selection;
     lastSelectionRef.current = { from, to };
   };
 
-  const setBlockType = (e) => {
+  const setBlockType = e => {
     const v = e.target.value;
     const sel = lastSelectionRef.current;
 
     let chain = editor?.chain().focus();
     if (!chain) return;
+
     if (sel) chain = chain.setTextSelection(sel);
 
     switch (v) {
-      case 'p': chain.setParagraph().run(); break;
-      case 'h1': chain.toggleHeading({ level: 1 }).run(); break;
-      case 'h2': chain.toggleHeading({ level: 2 }).run(); break;
-      case 'h3': chain.toggleHeading({ level: 3 }).run(); break;
-      default: break;
+      case 'p':
+        chain.setParagraph().run();
+        break;
+      case 'h1':
+        chain.toggleHeading({ level: 1 }).run();
+        break;
+      case 'h2':
+        chain.toggleHeading({ level: 2 }).run();
+        break;
+      case 'h3':
+        chain.toggleHeading({ level: 3 }).run();
+        break;
+      default:
+        break;
     }
 
     lastSelectionRef.current = null;
@@ -9704,24 +11610,37 @@ export default function WriteArticle() {
   const addLink = () => {
     const url = window.prompt('Enter URL (https://…)');
     if (!url) return;
+
     editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
+
   const removeLink = () => editor?.chain().focus().unsetLink().run();
+
   const insertHR = () => editor?.chain().focus().setHorizontalRule().run();
+
   const insertYouTube = () => {
     const url = window.prompt('Paste a YouTube URL');
     if (!url) return;
-    editor?.chain().focus().setYoutubeVideo({ src: url, width: 640, height: 360 }).run();
+
+    editor?.chain().focus().setYoutubeVideo({
+      src: url,
+      width: 640,
+      height: 360,
+    }).run();
   };
 
-  const handleFileAttach = async (e) => {
+  const handleFileAttach = async e => {
     const file = e.target.files?.[0];
     if (!file || !currentUser) return;
+
     try {
       const path = `files/${currentUser.uid}/${Date.now()}_${file.name}`;
-      const ref = sRef(storage, path);
-      await uploadBytes(ref, file);
-      const url = await getDownloadURL(ref);
+      const fileRef = sRef(storage, path);
+
+      await uploadBytes(fileRef, file);
+
+      const url = await getDownloadURL(fileRef);
+
       editor?.chain().focus()
         .insertContent(`<a href="${url}" rel="noopener nofollow" target="_blank">${file.name}</a>`)
         .run();
@@ -9732,31 +11651,34 @@ export default function WriteArticle() {
 
   const clearFormatting = () => editor?.chain().focus().clearNodes().unsetAllMarks().run();
 
-  /* ---------- emoji select ---------- */
-  const handleEmojiSelect = (emoji) => {
+  const handleEmojiSelect = emoji => {
     const char = emoji?.native || '';
     if (!char) return;
+
     editor?.chain().focus().insertContent(char).run();
     setPickerVisible(false);
   };
 
-  /* =========================================================
-     ✅ Highlight dropdown logic (selection only + no sticky)
-     ========================================================= */
   const clearStoredHighlight = useCallback(() => {
     if (!editor) return;
+
     const { state, view } = editor;
     const markType = state.schema.marks.highlight;
+
     if (!markType) return;
+
     view.dispatch(state.tr.removeStoredMark(markType).setStoredMarks([]));
   }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
+
     const fn = () => {
       if (editor.state.selection.empty) clearStoredHighlight();
     };
+
     editor.on('selectionUpdate', fn);
+
     return () => editor.off('selectionUpdate', fn);
   }, [editor, clearStoredHighlight]);
 
@@ -9768,6 +11690,7 @@ export default function WriteArticle() {
 
     editor.chain().focus().setHighlight({ color }).run();
     editor.chain().focus().setTextSelection(to).run();
+
     clearStoredHighlight();
     setHlOpen(false);
   }, [editor, clearStoredHighlight]);
@@ -9780,38 +11703,39 @@ export default function WriteArticle() {
 
     editor.chain().focus().unsetHighlight().run();
     editor.chain().focus().setTextSelection(to).run();
+
     clearStoredHighlight();
     setHlOpen(false);
   }, [editor, clearStoredHighlight]);
 
-  // Track active highlight color for underline indicator
   useEffect(() => {
     if (!editor) return;
 
     const update = () => {
       const attrs = editor.getAttributes('highlight');
-      const c = attrs?.color;
-      if (editor.isActive('highlight') && c) setActiveHighlightColor(c);
+      const color = attrs?.color;
+
+      if (editor.isActive('highlight') && color) setActiveHighlightColor(color);
       else setActiveHighlightColor('#D9D9D9');
     };
 
     update();
+
     editor.on('selectionUpdate', update);
     editor.on('transaction', update);
+
     return () => {
       editor.off('selectionUpdate', update);
       editor.off('transaction', update);
     };
   }, [editor]);
 
-  /* =========================================================
-     ✅ List dropdown logic (NO mismatched transactions)
-     ========================================================= */
   const getActiveListType = () => {
     if (!editor) return 'none';
     if (editor.isActive('taskList')) return 'task';
     if (editor.isActive('bulletList')) return 'bullet';
     if (editor.isActive('orderedList')) return 'ordered';
+
     return 'none';
   };
 
@@ -9819,51 +11743,47 @@ export default function WriteArticle() {
 
   useEffect(() => {
     if (!editor) return;
+
     const sync = () => setListValue(getActiveListType());
+
     sync();
     editor.on('selectionUpdate', sync);
+
     return () => editor.off('selectionUpdate', sync);
   }, [editor]);
 
-  const setListType = (e) => {
-    const v = e.target.value;
+  const setListType = e => {
+    const value = e.target.value;
     if (!editor) return;
 
     editor
       .chain()
       .focus()
       .command(({ editor, commands }) => {
-        // if image is selected, move cursor to text first
         if (editor.isActive('image')) {
           commands.createParagraphNear();
         }
 
-        // always clear all list types first (safe)
         if (editor.isActive('taskList')) commands.toggleTaskList();
         if (editor.isActive('bulletList')) commands.toggleBulletList();
         if (editor.isActive('orderedList')) commands.toggleOrderedList();
 
-        // then apply selected
-        if (v === 'bullet') commands.toggleBulletList();
-        if (v === 'ordered') commands.toggleOrderedList();
-        if (v === 'task') commands.toggleTaskList();
+        if (value === 'bullet') commands.toggleBulletList();
+        if (value === 'ordered') commands.toggleOrderedList();
+        if (value === 'task') commands.toggleTaskList();
 
         return true;
       })
       .run();
 
-    setListValue(v);
+    setListValue(value);
   };
 
-  /* =========================================================
-     ✅ Align dropdown logic (works on current paragraph/heading)
-     NOTE: “line inside same paragraph” is impossible without splitting.
-     If user uses Shift+Enter hardBreak, we split the block first.
-     ========================================================= */
   const getActiveAlign = () => {
     if (!editor) return 'left';
     if (editor.isActive({ textAlign: 'center' })) return 'center';
     if (editor.isActive({ textAlign: 'right' })) return 'right';
+
     return 'left';
   };
 
@@ -9871,45 +11791,56 @@ export default function WriteArticle() {
 
   useEffect(() => {
     if (!editor) return;
+
     const sync = () => setAlignValue(getActiveAlign());
+
     sync();
     editor.on('selectionUpdate', sync);
+
     return () => editor.off('selectionUpdate', sync);
   }, [editor]);
 
-  const setAlign = (e) => {
-    const v = e.target.value;
+  const setAlign = e => {
+    const value = e.target.value;
     if (!editor) return;
 
     editor
       .chain()
       .focus()
       .command(({ state, commands }) => {
-        // if paragraph contains hardBreaks, split into real paragraphs so align affects only “current line”
         const { $from } = state.selection;
         const parent = $from.parent;
+
         if (parent?.type?.name === 'paragraph') {
           let hasHardBreak = false;
-          parent.descendants((n) => {
-            if (n.type.name === 'hardBreak') { hasHardBreak = true; return false; }
+
+          parent.descendants(node => {
+            if (node.type.name === 'hardBreak') {
+              hasHardBreak = true;
+              return false;
+            }
+
             return true;
           });
+
           if (hasHardBreak) {
             commands.splitBlock();
           }
         }
+
         return true;
       })
-      .setTextAlign(v)
+      .setTextAlign(value)
       .run();
 
-    setAlignValue(v);
+    setAlignValue(value);
   };
 
-  /* ---------- submit & draft ---------- */
   const handleSubmit = async () => {
-    if (publishing) return;
+    if (publishing || imageUploading) return;
     if (!editor) return;
+
+    if (!validateArticleLimits({ isDraft: false })) return;
 
     const body = editor.getHTML();
     const bodyText = body.replace(/<[^>]*>?/gm, '').trim();
@@ -9923,71 +11854,117 @@ export default function WriteArticle() {
 
     try {
       const ts = Date.now();
+      const resolvedCoverUrl = getCoverUrlFromEditor();
+
       const payload = {
-        title,
+        title: title.trim(),
         body,
-        tags,
-        coverUrl: coverURL || '',
+        tags: normalizeTags(tags),
+        coverUrl: resolvedCoverUrl,
         authorId: currentUser.uid,
         createdAt: ts,
         updatedAt: ts,
       };
 
       let artId;
+
       if (isEdit && !isDraftMode) {
         await updateArticle(id, payload);
         artId = id;
       } else {
         const res = await createArticle(payload);
         artId = res.id;
+
         if (isDraftMode) await deleteDraft(currentUser.uid, id);
       }
 
       await Promise.all(
-        tags.map(async t => {
-          const refDoc = doc(fsDb, 'tags', t);
-          await setDoc(refDoc, { count: increment(1), updatedAt: serverTimestamp() }, { merge: true });
+        normalizeTags(tags).map(async tag => {
+          const refDoc = doc(fsDb, 'tags', tag);
+
+          await setDoc(
+            refDoc,
+            {
+              count: increment(1),
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
         })
       );
 
       nav(`/article/${artId}`);
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
       alert('Something went wrong, please try again.');
       setPublishing(false);
     }
   };
 
   const handleSaveDraft = async () => {
-    if (!currentUser) { alert('Please sign in first.'); return; }
-    if (!editor) return;
+    if (!currentUser) {
+      alert('Please sign in first.');
+      return;
+    }
+
+    if (!editor || imageUploading) return;
+
+    if (!validateArticleLimits({ isDraft: true })) return;
 
     try {
       const body = editor.getHTML();
       const ts = Date.now();
+      const resolvedCoverUrl = getCoverUrlFromEditor();
+
       const draftPayload = {
         userId: currentUser.uid,
-        title: title || '(untitled)',
+        title: title.trim() || '(untitled)',
         body,
-        tags,
-        coverUrl: coverURL || '',
+        tags: normalizeTags(tags),
+        coverUrl: resolvedCoverUrl,
         status: 'draft',
-        createdAt: ts,
         updatedAt: ts,
       };
 
-      if (isEdit && isDraftMode) await updateDraft(currentUser.uid, id, draftPayload);
-      else await createDraft(currentUser.uid, draftPayload);
+      if (isEdit && isDraftMode) {
+        await updateDraft(currentUser.uid, id, draftPayload);
+
+        coverUrlRef.current = draftPayload.coverUrl || '';
+        setCoverURL(draftPayload.coverUrl || null);
+
+        alert('Draft updated.');
+        return;
+      }
+
+      const existingDraft = await findExistingDraft();
+
+      if (existingDraft) {
+        const goToDraft = window.confirm(
+          'You already have one saved draft. To control storage cost, please edit or delete your existing draft before creating another one.\n\nDo you want to open your existing draft now?'
+        );
+
+        if (goToDraft) {
+          nav(`/write/edit/${existingDraft.id}?draft=1`);
+        }
+
+        return;
+      }
+
+      await createDraft(currentUser.uid, {
+        ...draftPayload,
+        createdAt: ts,
+      });
 
       alert('Draft saved.');
-    } catch (e) {
-      console.error('Draft save error:', e);
-      alert('Could not save draft. Please try again.');
+    } catch (err) {
+      console.error('Draft save error:', err);
+      alert(err.message || 'Could not save draft. Please try again.');
     }
   };
 
   const handleDelete = async () => {
     if (!isEdit) return;
+
     const ok = window.confirm('Delete this article permanently?');
     if (!ok) return;
 
@@ -9997,7 +11974,7 @@ export default function WriteArticle() {
         alert('Draft deleted.');
         nav('/profile');
       } else {
-        await rtdbRemove(rtdbRef(rtdb, `articles/${id}`));
+        await deleteArticle(id);
         alert('Article deleted.');
         nav('/');
       }
@@ -10009,13 +11986,18 @@ export default function WriteArticle() {
   const dateString = useMemo(() => {
     const now = new Date();
     const opts = { year: 'numeric', month: 'long', day: 'numeric' };
+
     return now.toLocaleDateString(undefined, opts);
   }, []);
 
-  const setImageSize = (sizeKey) => {
+  const setImageSize = sizeKey => {
     if (!editor?.isActive('image')) return;
+
     const key = sizeKey === 'sm' || sizeKey === 'lg' ? sizeKey : 'md';
-    editor.chain().focus().updateAttributes('image', { 'data-size': key }).run();
+
+    editor.chain().focus().updateAttributes('image', {
+      'data-size': key,
+    }).run();
   };
 
   const userName =
@@ -10043,30 +12025,66 @@ export default function WriteArticle() {
     { key: 'grey', label: 'Grey', color: '#D9D9D9' },
   ];
 
-  /* ---------- load article/draft ---------- */
+ 
   useEffect(() => {
-    if (!isEdit || !editor) return;
+  if (!isEdit || !editor || !currentUser?.uid) return;
 
-    const setFrom = (obj) => {
-      setTitle(obj.title || '');
-      setTags(obj.tags || []);
-      setCoverURL(obj.coverUrl || null);
-      editor.commands.setContent(obj.body || '<p></p>');
-      // after setting content, cover will be synced via syncCoverFromDoc()
-    };
+  let alive = true;
+  const uid = currentUser.uid;
 
-    if (isDraftMode) {
-      getDraftOnce(currentUser.uid, id).then(draft => {
-        if (!draft) { nav('/profile'); return; }
-        setFrom(draft);
-      });
-    } else {
-      rtdbGet(rtdbRef(rtdb, `articles/${id}`)).then(snap => {
-        if (!snap.exists()) { nav('/'); return; }
-        setFrom(snap.val());
-      });
-    }
-  }, [id, isEdit, isDraftMode, nav, editor, currentUser]);
+  const setFrom = obj => {
+    if (!alive) return;
+
+    const loadedCover = obj.coverUrl || obj.coverURL || obj.cover || '';
+
+    setTitle((obj.title || '').slice(0, MAX_TITLE_CHARS));
+    setTags(normalizeTags(obj.tags));
+    setCoverURL(loadedCover || null);
+    coverUrlRef.current = loadedCover;
+
+    editor.commands.setContent(obj.body || '<p></p>');
+
+    setTimeout(() => {
+      if (!alive) return;
+
+      /*
+       * Important:
+       * Use syncCoverFromDoc instead of getCoverUrlFromEditor here.
+       * getCoverUrlFromEditor depends on coverURL, and that caused edit page
+       * to reload after image upload, wiping the newly inserted image.
+       */
+      syncCoverFromDoc();
+    }, 0);
+  };
+
+  if (isDraftMode) {
+    getDraftOnce(uid, id).then(draft => {
+      if (!alive) return;
+
+      if (!draft) {
+        nav('/profile');
+        return;
+      }
+
+      setFrom(draft);
+    });
+  } else {
+    getArticleWithBodyOnce(id).then(article => {
+      if (!alive) return;
+
+      if (!article) {
+        nav('/');
+        return;
+      }
+
+      setFrom(article);
+    });
+  }
+
+  return () => {
+    alive = false;
+  };
+}, [id, isEdit, isDraftMode, nav, editor, currentUser?.uid, syncCoverFromDoc]);
 
   return (
     <div style={{ backgroundColor: '#F1F1E6' }}>
@@ -10075,6 +12093,7 @@ export default function WriteArticle() {
           <Link to="/" className="topbar-link">
             <MDBIcon fas icon="arrow-left" className="me-2" /> back to home
           </Link>
+
           {isEdit && (
             <button type="button" className="topbar-delete-btn" onClick={handleDelete}>
               <MDBIcon fas icon="trash-alt" className="me-2" /> {isDraftMode ? 'delete draft' : 'delete article'}
@@ -10085,20 +12104,22 @@ export default function WriteArticle() {
         <div className="bounded">
           <MDBRow className="justify-content-center">
             <MDBCol md="10" lg="9">
-              {/* ===================== META ===================== */}
               <div className="write-meta grid mt-2 write-meta--figma">
                 <div className="title-col">
                   <div className="write-date">{dateString}</div>
+
                   <input
                     className="title-input"
                     placeholder="TITLE"
                     value={title}
-                    onChange={e => setTitle(e.target.value)}
+                    maxLength={MAX_TITLE_CHARS}
+                    onChange={handleTitleChange}
                   />
 
                   <div className="tag-suggest tag-suggest--grid mt-3">
                     {suggestedTags.map(({ name, label }) => {
-                      const active = tags.includes(name);
+                      const active = normalizeTags(tags).includes(name);
+
                       return (
                         <button
                           type="button"
@@ -10136,7 +12157,6 @@ export default function WriteArticle() {
                 </div>
               </div>
 
-              {/* ===== Editor ===== */}
               <div className="editor-shell mt-5">
                 <div
                   className="editor-canvas transparent"
@@ -10153,23 +12173,34 @@ export default function WriteArticle() {
                   <EditorContent editor={editor} />
                 </div>
 
-                {/* ===== Toolbar ===== */}
                 <div className="editor-toolbar bottom shadow-soft">
-                  <ToolbarButton title="Bold" icon="bold"
+                  <ToolbarButton
+                    title="Bold"
+                    icon="bold"
                     active={editor?.isActive('bold')}
-                    onClick={() => editor?.chain().focus().toggleBold().run()} />
+                    onClick={() => editor?.chain().focus().toggleBold().run()}
+                  />
 
-                  <ToolbarButton title="Italic" icon="italic"
+                  <ToolbarButton
+                    title="Italic"
+                    icon="italic"
                     active={editor?.isActive('italic')}
-                    onClick={() => editor?.chain().focus().toggleItalic().run()} />
+                    onClick={() => editor?.chain().focus().toggleItalic().run()}
+                  />
 
-                  <ToolbarButton title="Underline" icon="underline"
+                  <ToolbarButton
+                    title="Underline"
+                    icon="underline"
                     active={editor?.isActive('underline')}
-                    onClick={() => editor?.chain().focus().toggleUnderline().run()} />
+                    onClick={() => editor?.chain().focus().toggleUnderline().run()}
+                  />
 
-                  <ToolbarButton title="Strikethrough" icon="strikethrough"
+                  <ToolbarButton
+                    title="Strikethrough"
+                    icon="strikethrough"
                     active={editor?.isActive('strike')}
-                    onClick={() => editor?.chain().focus().toggleStrike().run()} />
+                    onClick={() => editor?.chain().focus().toggleStrike().run()}
+                  />
 
                   <label className="tb-color" title="Text color">
                     <input
@@ -10178,7 +12209,6 @@ export default function WriteArticle() {
                     />
                   </label>
 
-                  {/* ✅ Highlight dropdown */}
                   <button
                     type="button"
                     ref={hlBtnRef}
@@ -10207,7 +12237,6 @@ export default function WriteArticle() {
 
                   <span className="tb-sep" />
 
-                  {/* Block type dropdown */}
                   <div className="tb-dd">
                     <select
                       className="tb-select tb-select--icon"
@@ -10230,7 +12259,6 @@ export default function WriteArticle() {
 
                   <span className="tb-sep" />
 
-                  {/* ✅ Lists */}
                   <div className="tb-dd" title="Lists">
                     <select
                       className="tb-select tb-select--icon"
@@ -10241,14 +12269,12 @@ export default function WriteArticle() {
                       <option value="none">≡</option>
                       <option value="bullet">•</option>
                       <option value="ordered">1.</option>
-                      {/* <option value="task">☑</option> */}
                     </select>
                     <i className="fas fa-caret-down tb-dd-caret" />
                   </div>
 
                   <span className="tb-sep" />
 
-                  {/* ✅ Align */}
                   <div className="tb-dd" title="Align">
                     <select
                       className="tb-select tb-select--icon"
@@ -10265,22 +12291,29 @@ export default function WriteArticle() {
 
                   <span className="tb-sep" />
 
-                  {/* Insert Image */}
-                  <div className="tb-dd" title="InsertImage">
-                    <button type="button" className="tb-btn" 
+                  <div className="tb-dd" title={`Insert image. Max ${MAX_ARTICLE_IMAGES} images per article.`}>
+                    <button
+                      type="button"
+                      className="tb-btn"
+                      disabled={imageUploading || getEditorImageCount() >= MAX_ARTICLE_IMAGES}
                       onClick={() => {
-                          if (!editor) return;
-                      
-                          // ✅ If an image is selected, move cursor out of it BEFORE picking a file
-                          if (editor.isActive('image')) {
-                            editor.chain().focus().createParagraphNear().run();
-                          } else {
-                            editor.chain().focus().run();
-                          }
-                      
-                          imgInputRef.current?.click();
-                        }}                    >
-                      <i className="fas fa-image" />
+                        if (!editor || imageUploading) return;
+
+                        if (getEditorImageCount() >= MAX_ARTICLE_IMAGES) {
+                          alert(`You can upload up to ${MAX_ARTICLE_IMAGES} images per article. One image will be used as the cover image.`);
+                          return;
+                        }
+
+                        if (editor.isActive('image')) {
+                          editor.chain().focus().createParagraphNear().run();
+                        } else {
+                          editor.chain().focus().run();
+                        }
+
+                        imgInputRef.current?.click();
+                      }}
+                    >
+                      <i className={imageUploading ? 'fas fa-spinner fa-spin' : 'fas fa-image'} />
                     </button>
                   </div>
 
@@ -10299,26 +12332,41 @@ export default function WriteArticle() {
                   </button>
                 </div>
 
-                {/* Hidden inputs for uploads */}
-                <input ref={imgInputRef} type="file" hidden accept="image/*" onChange={handleImgUpload} />
-                <input ref={fileInputRef} type="file" hidden onChange={handleFileAttach} />
+                <input
+                  ref={imgInputRef}
+                  type="file"
+                  hidden
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImgUpload}
+                />
 
-                {/* ✅ Highlight menu (PORTAL) */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  hidden
+                  onChange={handleFileAttach}
+                />
+
                 {hlOpen && createPortal(
                   <div
                     ref={hlPanelRef}
                     className="tb-hl-panel"
-                    style={{ position: 'absolute', top: hlPos.top, left: hlPos.left, zIndex: 9999 }}
+                    style={{
+                      position: 'absolute',
+                      top: hlPos.top,
+                      left: hlPos.left,
+                      zIndex: 9999,
+                    }}
                     role="menu"
                   >
-                    {HIGHLIGHT_COLORS.map(c => (
+                    {HIGHLIGHT_COLORS.map(colorItem => (
                       <button
-                        key={c.key}
+                        key={colorItem.key}
                         className="tb-hl-item"
-                        onClick={() => applyHighlightColor(c.color)}
+                        onClick={() => applyHighlightColor(colorItem.color)}
                       >
-                        <span className="tb-hl-swatch" style={{ background: c.color }} />
-                        <span>{c.label}</span>
+                        <span className="tb-hl-swatch" style={{ background: colorItem.color }} />
+                        <span>{colorItem.label}</span>
                       </button>
                     ))}
 
@@ -10336,12 +12384,16 @@ export default function WriteArticle() {
                   document.body
                 )}
 
-                {/* Emoji picker (PORTAL) */}
                 {pickerVisible && createPortal(
                   <div
                     ref={emojiPanelRef}
                     className="emoji-all-pop"
-                    style={{ position: 'absolute', top: emojiPos.top, left: emojiPos.left, zIndex: 9999 }}
+                    style={{
+                      position: 'absolute',
+                      top: emojiPos.top,
+                      left: emojiPos.left,
+                      zIndex: 9999,
+                    }}
                     role="dialog"
                     aria-modal="true"
                   >
@@ -10358,48 +12410,63 @@ export default function WriteArticle() {
                   document.body
                 )}
 
-                {/* “+ More” panel (PORTAL) */}
                 {moreOpen && createPortal(
                   <div
                     ref={morePanelRef}
                     className="tb-more-panel"
-                    style={{ position: 'absolute', top: morePos.top, left: morePos.left, zIndex: 9999 }}
+                    style={{
+                      position: 'absolute',
+                      top: morePos.top,
+                      left: morePos.left,
+                      zIndex: 9999,
+                    }}
                     role="menu"
                   >
                     <button className="tb-item" onClick={addLink}>
-                      <i className="fas fa-link" /><span>Insert link</span>
+                      <i className="fas fa-link" />
+                      <span>Insert link</span>
                     </button>
+
                     <button className="tb-item" onClick={removeLink}>
-                      <i className="fas fa-unlink" /><span>Remove link</span>
+                      <i className="fas fa-unlink" />
+                      <span>Remove link</span>
                     </button>
 
                     <button className="tb-item" onClick={() => fileInputRef.current?.click()}>
-                      <i className="fas fa-file" /><span>Attach file</span>
+                      <i className="fas fa-file" />
+                      <span>Attach file</span>
                     </button>
 
                     <button className="tb-item" onClick={insertYouTube}>
-                      <i className="fas fa-video" /><span>Insert YouTube</span>
+                      <i className="fas fa-video" />
+                      <span>Insert YouTube</span>
                     </button>
+
                     <button className="tb-item" onClick={insertHR}>
-                      <i className="fas fa-minus" /><span>Horizontal rule</span>
+                      <i className="fas fa-minus" />
+                      <span>Horizontal rule</span>
                     </button>
 
                     <div className="tb-divider" />
 
                     <button className="tb-item" onClick={clearFormatting}>
-                      <i className="fas fa-eraser" /><span>Clear formatting</span>
+                      <i className="fas fa-eraser" />
+                      <span>Clear formatting</span>
                     </button>
+
                     <button className="tb-item" onClick={() => editor?.chain().focus().undo().run()}>
-                      <i className="fas fa-undo" /><span>Undo</span>
+                      <i className="fas fa-undo" />
+                      <span>Undo</span>
                     </button>
+
                     <button className="tb-item" onClick={() => editor?.chain().focus().redo().run()}>
-                      <i className="fas fa-redo" /><span>Redo</span>
+                      <i className="fas fa-redo" />
+                      <span>Redo</span>
                     </button>
                   </div>,
                   document.body
                 )}
 
-                {/* image bubble tools */}
                 {editor && (
                   <BubbleMenu
                     editor={editor}
@@ -10407,45 +12474,56 @@ export default function WriteArticle() {
                     tippyOptions={{ duration: 0 }}
                   >
                     <div className="bubble-tools">
-                      <MDBBtn type="button" size="sm" color="light"
-                        onClick={() => setImageSize('sm')} title="Small image">
+                      <MDBBtn
+                        type="button"
+                        size="sm"
+                        color="light"
+                        onClick={() => setImageSize('sm')}
+                        title="Small image"
+                      >
                         S
-                      </MDBBtn>
-                      <MDBBtn type="button" size="sm" color="light"
-                        onClick={() => setImageSize('md')} title="Medium image">
-                        M
-                      </MDBBtn>
-                      <MDBBtn type="button" size="sm" color="light"
-                        onClick={() => setImageSize('lg')} title="Large image">
-                        L
-                      </MDBBtn>
-
-                      <MDBBtn type="button" size="sm" color="light"
-                        onClick={() => document.getElementById('img-edit-upload').click()}
-                        title="Replace image">
-                        <MDBIcon fas icon="pencil-alt" />
                       </MDBBtn>
 
                       <MDBBtn
                         type="button"
                         size="sm"
                         color="light"
-                        onClick={() => {
-                          const sel = editor?.state?.selection;
-                          const node = sel?.node;
-                          const src = node?.type?.name === 'image' ? node.attrs?.src : null;
-                          const wasCover = node?.attrs?.['data-cover'] === '1';
+                        onClick={() => setImageSize('md')}
+                        title="Medium image"
+                      >
+                        M
+                      </MDBBtn>
 
-                          editor.chain().focus().deleteSelection().run();
+                      <MDBBtn
+                        type="button"
+                        size="sm"
+                        color="light"
+                        onClick={() => setImageSize('lg')}
+                        title="Large image"
+                      >
+                        L
+                      </MDBBtn>
 
-                          // if deleted cover, clear coverURL (transaction sync will handle)
-                          if (wasCover && src && src === coverURL) {
-                            setCoverURL(null);
-                          }
+                      <MDBBtn
+                        type="button"
+                        size="sm"
+                        color="light"
+                        disabled={imageUploading}
+                        onClick={() => document.getElementById('img-edit-upload').click()}
+                        title="Replace image"
+                      >
+                        {imageUploading ? (
+                          <MDBSpinner size="sm" tag="span" />
+                        ) : (
+                          <MDBIcon fas icon="pencil-alt" />
+                        )}
+                      </MDBBtn>
 
-                          // back to typing
-                          editor.chain().focus().createParagraphNear().run();
-                        }}
+                      <MDBBtn
+                        type="button"
+                        size="sm"
+                        color="light"
+                        onClick={deleteSelectedImage}
                         title="Delete image"
                       >
                         <MDBIcon fas icon="trash" />
@@ -10458,21 +12536,47 @@ export default function WriteArticle() {
                   id="img-edit-upload"
                   hidden
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={handleReplaceSelectedImage}
                 />
               </div>
 
-              {/* ===== Actions ===== */}
               <div className="write-actions mt-5" aria-label="article actions">
-                <button type="button" className="btn-preview pill-btn" onClick={() => setPreviewOpen(true)}>
+                <button
+                  type="button"
+                  className="btn-preview pill-btn"
+                  onClick={() => setPreviewOpen(true)}
+                >
                   Preview
                 </button>
-                <button type="button" className="btn-publish pill-btn" disabled={publishing} onClick={handleSubmit}>
-                  {publishing ? (<><MDBSpinner size="sm" tag="span" className="me-2" role="status" />Publishing…</>) : 'PUBLISH'}
+
+                <button
+                  type="button"
+                  className="btn-publish pill-btn"
+                  disabled={publishing || imageUploading}
+                  onClick={handleSubmit}
+                >
+                  {publishing ? (
+                    <>
+                      <MDBSpinner size="sm" tag="span" className="me-2" role="status" />
+                      Publishing…
+                    </>
+                  ) : imageUploading ? (
+                    'Uploading image…'
+                  ) : (
+                    'PUBLISH'
+                  )}
                 </button>
+
                 <div className="save-row">
-                  <button type="button" className="save-draft-link" onClick={handleSaveDraft}>Save as Draft</button>
+                  <button
+                    type="button"
+                    className="save-draft-link"
+                    disabled={imageUploading}
+                    onClick={handleSaveDraft}
+                  >
+                    Save as Draft
+                  </button>
                 </div>
               </div>
             </MDBCol>
@@ -10485,16 +12589,15 @@ export default function WriteArticle() {
         onClose={() => setPreviewOpen(false)}
         onPublish={handleSubmit}
         title={title}
-        tags={tags}
-        coverUrl={coverURL}
+        tags={normalizeTags(tags)}
+        coverUrl={getCoverUrlFromEditor() || coverUrlRef.current}
         bodyHTML={editor?.getHTML?.() || ''}
       />
     </div>
   );
 }
 
-/* ---------- Preview overlay ---------- */
-function PreviewOverlay({ open, onClose, onPublish, title, tags, coverUrl, bodyHTML }) {
+function PreviewOverlay({ open, onClose, title, tags, coverUrl, bodyHTML }) {
   if (!open) return null;
 
   return (
@@ -10516,39 +12619,30 @@ function PreviewOverlay({ open, onClose, onPublish, title, tags, coverUrl, bodyH
 
             {Array.isArray(tags) && tags.length > 0 && (
               <div className="preview-tags">
-                {tags.map(t => (
-                  <span key={t} className="chip chip-outline">#{t}</span>
+                {tags.map(tag => (
+                  <span key={tag} className="chip chip-outline">
+                    #{tag}
+                  </span>
                 ))}
               </div>
             )}
 
             <div
               className="preview-body"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(bodyHTML || '') }}
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(bodyHTML || ''),
+              }}
             />
           </div>
         </div>
 
         <div className="preview-actions">
-          <button type="button" className="btn-preview pill-btn" onClick={onClose}>Back</button>
+          <button type="button" className="btn-preview pill-btn" onClick={onClose}>
+            Back
+          </button>
         </div>
       </div>
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

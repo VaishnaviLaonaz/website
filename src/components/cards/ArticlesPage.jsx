@@ -660,7 +660,7 @@
 // ArticlePage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { MDBBtn } from "mdb-react-ui-kit";
-import { useArticles } from "../../configs/useArticles";
+import { useLiveArticles } from "../../configs/useArticles";
 import ArticleCard from "../../components/cards/ArticleCard";
 import { db as fsDb } from "../../configs/firebase";
 import { doc, getDoc, collection, onSnapshot } from "firebase/firestore";
@@ -721,7 +721,7 @@ async function fetchAuthors(uids) {
 }
 
 export default function ArticlesPage() {
-  const articles = useArticles(80) || [];
+  const articles = useLiveArticles(80) || [];
   const [filterTag, setFilterTag] = useState(null);
   const [allTags, setAllTags] = useState(DEFAULT_TAGS);
   const [sortMode, setSortMode] = useState(SORT_MODES.RECENT);

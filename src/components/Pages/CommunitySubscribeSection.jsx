@@ -4,7 +4,7 @@ import "../../styles/community-subscribe-section.css";
 
 export default function CommunitySubscribeSection({
   youtubeUrl = "/",
-  instagramUrl = "https://www.instagram.com/laonaz.community/",
+  instagramUrl = "https://www.instagram.com/laonazcommunity/",
 }) {
   return (
     <section className="community-subscribe-section bounded">

@@ -1038,58 +1038,302 @@
 
 
 
+//below is correct and working before cost cutting
+
+// import React, { useEffect, useState } from 'react';
+// import { Link } from 'react-router-dom';
+// import {
+//   collection, query, orderBy, limit, onSnapshot, updateDoc
+// } from 'firebase/firestore';
+// import { db } from '../../configs/firebase';
+// import { useAuth } from '../../context/AuthContext';
+// import { useUserDoc } from '../../configs/user';
+// import { MDBIcon, MDBBtn } from 'mdb-react-ui-kit';
+
+// const OLIVE   = '#5C6B3C';
+// const CANVAS  = '#FFFFFF';
+// const DIVIDER = 'rgba(92, 107, 60, 0.35)';
+// const SHADOW  = '0 10px 30px rgba(0,0,0,0.18)';
+
+// const ROW_HEIGHT       = 64;
+// const MAX_VISIBLE_ROWS = 5;
+
+// export default function Notifications() {
+//   const { currentUser } = useAuth();
+//   const { userDoc } = useUserDoc();
+//   const [items, setItems] = useState([]);
+
+//   useEffect(() => {
+//     if (!currentUser) return;
+//     const q = query(
+//       collection(db, 'users', currentUser.uid, 'notifications'),
+//       orderBy('createdAt', 'desc'),
+//       limit(20)
+//     );
+//     return onSnapshot(q, (snap) => {
+//       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+//       setItems(list);
+
+//       snap.docs.forEach((d) => {
+//         const data = d.data();
+//         if (data.createdAt && !data.read) updateDoc(d.ref, { read: true });
+//       });
+//     });
+//   }, [currentUser]);
+
+//   const fallbackAvatar = 'https://placehold.co/40x40';
+
+//   return (
+//     <>
+//       <style>{`
+//         .notification-list { list-style: none; margin: 0; padding: 0; }
+//         .notification-item { padding: 14px 16px; min-height: ${ROW_HEIGHT}px; background: ${CANVAS}; }
+//         .notification-row  { display: flex; align-items: flex-start; gap: 10px; }
+//         .notification-body { font-size: 0.95rem; line-height: 1.35; flex: 1; }
+
+//         .notification-link {
+//           color: #222;
+//           text-decoration: none;
+//           display: inline-block;
+//           max-width: 230px;
+//         }
+
+//         .notification-link:hover {
+//           text-decoration: underline;
+//         }
+
+//         .notification-text {
+//             display: inline-block;
+//             overflow: hidden;
+//             text-overflow: ellipsis;
+//             white-space: nowrap;
+//             max-width: 130px;
+//             vertical-align: bottom;
+//             font-style: italic;
+//         }
+
+//         .notification-avatar {
+//           width: 36px;
+//           height: 36px;
+//           border-radius: 50%;
+//           object-fit: cover;
+//         }
+//       `}</style>
+
+//       <div
+//         onClick={(e) => e.stopPropagation()} // prevent closing on internal click
+//         className="position-absolute top-100 end-0"
+//         style={{
+//           minWidth: 300,
+//           background: CANVAS,
+//           border: `1px solid ${OLIVE}`,
+//           borderRadius: 10,
+//           boxShadow: SHADOW,
+//           zIndex: 999,
+//           overflow: 'hidden'
+//         }}
+//         role="dialog"
+//         aria-label="Notifications"
+//       >
+//         <div
+//           className="d-flex justify-content-between align-items-center"
+//           style={{ background: OLIVE, color: '#FFF', padding: '12px 16px' }}
+//         >
+//           <strong style={{ fontFamily: 'Poppins, sans-serif', fontSize: 18 }}>
+//             Notifications
+//           </strong>
+//         </div>
+
+//         <div
+//           style={{
+//             maxHeight: `${ROW_HEIGHT * MAX_VISIBLE_ROWS}px`,
+//             overflowY: items.length > MAX_VISIBLE_ROWS ? 'auto' : 'visible'
+//           }}
+//         >
+//           {items.length === 0 ? (
+//             <p className="text-muted mb-0 py-3 px-3">No notifications</p>
+//           ) : (
+//             <ul className="notification-list">
+//               {items.map((n, idx) => {
+//                 const borderTop = idx === 0 ? 'none' : `1px solid ${DIVIDER}`;
+//                 const avatar = n.actorAvatar || fallbackAvatar;
+//                 const name = n.actorName || 'Someone';
+//                 const title = n.articleTitle || 'your article';
+
+//                 return (
+//                   <li key={n.id} className="notification-item" style={{ borderTop }}>
+//                     <div className="notification-row">
+//                       <img src={avatar} alt="" className="notification-avatar" />
+//                       <div className="notification-body">
+//                         {n.type === 'comment' && (
+//                           <Link to={`/article/${n.articleId}`} className="notification-link">
+//                             <strong>{name}</strong> commented on <span className="notification-text">{title}</span>
+//                           </Link>
+//                         )}
+//                         {n.type === 'like' && (
+//                           <Link to={`/article/${n.articleId}`} className="notification-link">
+//                             <strong>{name}</strong> liked <span className="notification-text">{title}</span>
+//                           </Link>
+//                         )}
+//                         {n.type === 'comment-reply' && (
+//                           <Link to={`/article/${n.articleId}#comment-${n.commentId}`} className="notification-link">
+//                             <strong>{name}</strong> replied to your comment
+//                           </Link>
+//                         )}
+//                         {n.type === 'comment-like' && (
+//                           <Link to={`/article/${n.articleId}#comment-${n.commentId}`} className="notification-link">
+//                             <strong>{name}</strong> liked your comment
+//                           </Link>
+//                         )}
+//                         {n.type === 'follow' && (
+//                           <Link to={`/u/${n.actorUsername || n.actorName}`} className="notification-link">
+//                             <strong>{name}</strong> started following you
+//                           </Link>
+//                         )}
+//                         {n.type === 'article-publish' && (
+//                           <Link to={`/article/${n.articleId}`} className="notification-link">
+//                             <strong>{name}</strong> published <span className="notification-text">{title}</span>
+//                           </Link>
+//                         )}
+//                       </div>
+//                     </div>
+//                   </li>
+//                 );
+//               })}
+//             </ul>
+//           )}
+//         </div>
+//       </div>
+//     </>
+//   );
+// }
 
 
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+//above one is correct workimg before cost cutting
+
+
+import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  collection, query, orderBy, limit, onSnapshot, updateDoc
-} from 'firebase/firestore';
-import { db } from '../../configs/firebase';
-import { useAuth } from '../../context/AuthContext';
-import { useUserDoc } from '../../configs/user';
-import { MDBIcon, MDBBtn } from 'mdb-react-ui-kit';
+  collection,
+  query,
+  orderBy,
+  limit,
+  onSnapshot,
+  updateDoc,
+} from "firebase/firestore";
 
-const OLIVE   = '#5C6B3C';
-const CANVAS  = '#FFFFFF';
-const DIVIDER = 'rgba(92, 107, 60, 0.35)';
-const SHADOW  = '0 10px 30px rgba(0,0,0,0.18)';
+import { db } from "../../configs/firebase";
+import { useAuth } from "../../context/AuthContext";
 
-const ROW_HEIGHT       = 64;
+const OLIVE = "#5C6B3C";
+const CANVAS = "#FFFFFF";
+const DIVIDER = "rgba(92, 107, 60, 0.35)";
+const SHADOW = "0 10px 30px rgba(0,0,0,0.18)";
+
+const ROW_HEIGHT = 64;
 const MAX_VISIBLE_ROWS = 5;
+const NOTIFICATIONS_LIMIT = 20;
 
 export default function Notifications() {
   const { currentUser } = useAuth();
-  const { userDoc } = useUserDoc();
   const [items, setItems] = useState([]);
 
+  /*
+   * Prevent repeated read-marking writes for same notification id
+   * while onSnapshot re-runs.
+   */
+  const markingRef = useRef(new Set());
+
   useEffect(() => {
-    if (!currentUser) return;
-    const q = query(
-      collection(db, 'users', currentUser.uid, 'notifications'),
-      orderBy('createdAt', 'desc'),
-      limit(20)
+    if (!currentUser?.uid) {
+      setItems([]);
+      return () => {};
+    }
+
+    const notificationsQuery = query(
+      collection(db, "users", currentUser.uid, "notifications"),
+      orderBy("createdAt", "desc"),
+      limit(NOTIFICATIONS_LIMIT)
     );
-    return onSnapshot(q, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setItems(list);
 
-      snap.docs.forEach((d) => {
-        const data = d.data();
-        if (data.createdAt && !data.read) updateDoc(d.ref, { read: true });
-      });
-    });
-  }, [currentUser]);
+    const unsubscribe = onSnapshot(
+      notificationsQuery,
+      async (snap) => {
+        const list = snap.docs.map((notificationDoc) => ({
+          id: notificationDoc.id,
+          ...notificationDoc.data(),
+        }));
 
-  const fallbackAvatar = 'https://placehold.co/40x40';
+        setItems(list);
+
+        const unreadDocs = snap.docs.filter((notificationDoc) => {
+          const data = notificationDoc.data();
+
+          return (
+            data.createdAt &&
+            !data.read &&
+            !markingRef.current.has(notificationDoc.id)
+          );
+        });
+
+        if (!unreadDocs.length) return;
+
+        unreadDocs.forEach((notificationDoc) => {
+          markingRef.current.add(notificationDoc.id);
+        });
+
+        try {
+          await Promise.all(
+            unreadDocs.map((notificationDoc) =>
+              updateDoc(notificationDoc.ref, { read: true })
+            )
+          );
+        } catch (err) {
+          console.error("markNotificationsRead:", err);
+
+          unreadDocs.forEach((notificationDoc) => {
+            markingRef.current.delete(notificationDoc.id);
+          });
+        }
+      },
+      (err) => {
+        console.error("notifications listener:", err);
+        setItems([]);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [currentUser?.uid]);
+
+  const fallbackAvatar = "https://placehold.co/40x40";
 
   return (
     <>
       <style>{`
-        .notification-list { list-style: none; margin: 0; padding: 0; }
-        .notification-item { padding: 14px 16px; min-height: ${ROW_HEIGHT}px; background: ${CANVAS}; }
-        .notification-row  { display: flex; align-items: flex-start; gap: 10px; }
-        .notification-body { font-size: 0.95rem; line-height: 1.35; flex: 1; }
+        .notification-list {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+
+        .notification-item {
+          padding: 14px 16px;
+          min-height: ${ROW_HEIGHT}px;
+          background: ${CANVAS};
+        }
+
+        .notification-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+        }
+
+        .notification-body {
+          font-size: 0.95rem;
+          line-height: 1.35;
+          flex: 1;
+        }
 
         .notification-link {
           color: #222;
@@ -1103,13 +1347,13 @@ export default function Notifications() {
         }
 
         .notification-text {
-            display: inline-block;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 130px;
-            vertical-align: bottom;
-            font-style: italic;
+          display: inline-block;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 130px;
+          vertical-align: bottom;
+          font-style: italic;
         }
 
         .notification-avatar {
@@ -1121,7 +1365,7 @@ export default function Notifications() {
       `}</style>
 
       <div
-        onClick={(e) => e.stopPropagation()} // prevent closing on internal click
+        onClick={(e) => e.stopPropagation()}
         className="position-absolute top-100 end-0"
         style={{
           minWidth: 300,
@@ -1130,16 +1374,25 @@ export default function Notifications() {
           borderRadius: 10,
           boxShadow: SHADOW,
           zIndex: 999,
-          overflow: 'hidden'
+          overflow: "hidden",
         }}
         role="dialog"
         aria-label="Notifications"
       >
         <div
           className="d-flex justify-content-between align-items-center"
-          style={{ background: OLIVE, color: '#FFF', padding: '12px 16px' }}
+          style={{
+            background: OLIVE,
+            color: "#FFF",
+            padding: "12px 16px",
+          }}
         >
-          <strong style={{ fontFamily: 'Poppins, sans-serif', fontSize: 18 }}>
+          <strong
+            style={{
+              fontFamily: "Poppins, sans-serif",
+              fontSize: 18,
+            }}
+          >
             Notifications
           </strong>
         </div>
@@ -1147,52 +1400,92 @@ export default function Notifications() {
         <div
           style={{
             maxHeight: `${ROW_HEIGHT * MAX_VISIBLE_ROWS}px`,
-            overflowY: items.length > MAX_VISIBLE_ROWS ? 'auto' : 'visible'
+            overflowY: items.length > MAX_VISIBLE_ROWS ? "auto" : "visible",
           }}
         >
           {items.length === 0 ? (
             <p className="text-muted mb-0 py-3 px-3">No notifications</p>
           ) : (
             <ul className="notification-list">
-              {items.map((n, idx) => {
-                const borderTop = idx === 0 ? 'none' : `1px solid ${DIVIDER}`;
-                const avatar = n.actorAvatar || fallbackAvatar;
-                const name = n.actorName || 'Someone';
-                const title = n.articleTitle || 'your article';
+              {items.map((notification, idx) => {
+                const borderTop =
+                  idx === 0 ? "none" : `1px solid ${DIVIDER}`;
+
+                const avatar = notification.actorAvatar || fallbackAvatar;
+                const name = notification.actorName || "Someone";
+                const title = notification.articleTitle || "your article";
 
                 return (
-                  <li key={n.id} className="notification-item" style={{ borderTop }}>
+                  <li
+                    key={notification.id}
+                    className="notification-item"
+                    style={{ borderTop }}
+                  >
                     <div className="notification-row">
-                      <img src={avatar} alt="" className="notification-avatar" />
+                      <img
+                        src={avatar}
+                        alt=""
+                        className="notification-avatar"
+                      />
+
                       <div className="notification-body">
-                        {n.type === 'comment' && (
-                          <Link to={`/article/${n.articleId}`} className="notification-link">
-                            <strong>{name}</strong> commented on <span className="notification-text">{title}</span>
+                        {notification.type === "comment" && (
+                          <Link
+                            to={`/article/${notification.articleId}`}
+                            className="notification-link"
+                          >
+                            <strong>{name}</strong> commented on{" "}
+                            <span className="notification-text">{title}</span>
                           </Link>
                         )}
-                        {n.type === 'like' && (
-                          <Link to={`/article/${n.articleId}`} className="notification-link">
-                            <strong>{name}</strong> liked <span className="notification-text">{title}</span>
+
+                        {notification.type === "like" && (
+                          <Link
+                            to={`/article/${notification.articleId}`}
+                            className="notification-link"
+                          >
+                            <strong>{name}</strong> liked{" "}
+                            <span className="notification-text">{title}</span>
                           </Link>
                         )}
-                        {n.type === 'comment-reply' && (
-                          <Link to={`/article/${n.articleId}#comment-${n.commentId}`} className="notification-link">
+
+                        {notification.type === "comment-reply" && (
+                          <Link
+                            to={`/article/${notification.articleId}#comment-${notification.commentId}`}
+                            className="notification-link"
+                          >
                             <strong>{name}</strong> replied to your comment
                           </Link>
                         )}
-                        {n.type === 'comment-like' && (
-                          <Link to={`/article/${n.articleId}#comment-${n.commentId}`} className="notification-link">
+
+                        {notification.type === "comment-like" && (
+                          <Link
+                            to={`/article/${notification.articleId}#comment-${notification.commentId}`}
+                            className="notification-link"
+                          >
                             <strong>{name}</strong> liked your comment
                           </Link>
                         )}
-                        {n.type === 'follow' && (
-                          <Link to={`/u/${n.actorUsername || n.actorName}`} className="notification-link">
+
+                        {notification.type === "follow" && (
+                          <Link
+                            to={`/u/${
+                              notification.actorUsername ||
+                              notification.actorName
+                            }`}
+                            className="notification-link"
+                          >
                             <strong>{name}</strong> started following you
                           </Link>
                         )}
-                        {n.type === 'article-publish' && (
-                          <Link to={`/article/${n.articleId}`} className="notification-link">
-                            <strong>{name}</strong> published <span className="notification-text">{title}</span>
+
+                        {notification.type === "article-publish" && (
+                          <Link
+                            to={`/article/${notification.articleId}`}
+                            className="notification-link"
+                          >
+                            <strong>{name}</strong> published{" "}
+                            <span className="notification-text">{title}</span>
                           </Link>
                         )}
                       </div>

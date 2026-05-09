@@ -2379,7 +2379,553 @@
 //   );
 // }
 
+// //Correct one below before cost cutting
 
+// /* ------------------------------------------------------------------ */
+// /*  src/components/cards/ArticleCard.jsx                              */
+// /* ------------------------------------------------------------------ */
+// import React, { useState, useEffect } from "react";
+// import {
+//   MDBCard,
+//   MDBBadge,
+//   MDBCardBody,
+//   MDBCardImage,
+//   MDBIcon,
+//   MDBBtn,
+// } from "mdb-react-ui-kit";
+// import { Link, useNavigate  } from "react-router-dom";
+// import { ref, onValue } from "firebase/database";
+// import { rtdb } from "../../configs/firebase";
+// import { useAuth } from "../../context/AuthContext";
+// import {
+//   likeArticle,
+//   streamLikeCount,
+//   streamCommentCount,
+//   toggleBookmark,
+//   streamBookmarkCount,
+// } from "../../configs/useArticles";
+// import CommentList from "./CommentList";
+// import '../../styles/design-tokens.css';
+
+// /* ─────────── ICON ASSETS (your SVGs) ─────────── */
+// import ViewIcon from '../../images/icons/View Icon.svg';
+// import CommentIcon from '../../images/icons/comment icon.svg';
+// import EditIcon from '../../images/icons/edit icon.svg';
+// import DeleteIcon from '../../images/icons/delete icon.svg';
+// import LikeIcon from '../../images/icons/like icon.svg';
+
+// /* ─────────── responsive helpers ─────────── */
+// const coverH   = 260; 
+// const titleRem = 1.35;
+
+// export default function ArticleCard({
+//   article,
+//   author,
+//   isOwner = false,
+//   onEdit,
+//   onDelete,
+//   isWinner = false, 
+//   isDraft = false, 
+//   liveMeta = true,            
+// }) {
+//   const navigate = useNavigate();
+//   const { currentUser } = useAuth();
+//   const uid = currentUser?.uid;
+
+//   /* ─────────── live state ─────────── */
+//   const [likedMe, setLikedMe] = useState(false);
+
+//   // seed counters from whatever is already in the snapshot
+//   const [likesTotal, setLikesTotal] = useState(
+//     article?.likesCount ??
+//       (article?.likedBy ? Object.keys(article.likedBy).length : 0)
+//   );
+//   const [bookmarkedMe, setBookmarkedMe] = useState(false);
+//   const [commentsCnt, setCommentsCnt] = useState(article?.commentsCount ?? 0);
+//   const [showComments, setShowComments] = useState(false);
+//   const [imgLoaded, setImgLoaded] = useState(false);
+//   /* ─────────── firebase listeners ─────────── */
+//   useEffect(() => {
+//     if (!article?.id || !liveMeta) return;
+
+//     // listeners that *do* need uid
+//     let offLikeMine = () => {};
+//     let offBmMine   = () => {};
+//     if (uid) {
+//       offLikeMine = onValue(
+//         ref(rtdb, `articles/${article.id}/likedBy/${uid}`),
+//         (s) => setLikedMe(!!s.val())
+//       );
+//       offBmMine = onValue(
+//         ref(rtdb, `articles/${article.id}/bookmarkedBy/${uid}`),
+//         (s) => setBookmarkedMe(!!s.val())
+//       );
+//     }
+
+//     // counters
+//     const offLikesTot = streamLikeCount(article.id, setLikesTotal);
+//     const offComTot   = streamCommentCount(article.id, setCommentsCnt);
+
+//     // (we don’t show the bookmark counter in this compact card)
+//     const offBmTot    = streamBookmarkCount(article.id, () => {});
+//     return () => {
+//       offLikeMine(); offBmMine(); offLikesTot(); offComTot(); offBmTot();
+//     };
+//   }, [article?.id, uid, liveMeta]);
+
+//   /* ─────────── actions ─────────── */
+//   const doLike = (e) => {
+//     e.preventDefault();
+//     e.stopPropagation();
+//     if (!uid) return;
+//     setLikedMe((x) => !x);
+//     likeArticle(article.id, uid).catch(() => setLikedMe((x) => !x));
+//   };
+
+//   const doBookmark = (e) => {
+//     e.preventDefault();
+//     e.stopPropagation();
+//     if (!uid) return;
+//     setBookmarkedMe((x) => !x);
+//     toggleBookmark(article.id, uid).catch(() => setBookmarkedMe((x) => !x));
+//   };
+
+//   /* ─────────── render ─────────── */
+//   if (!article) return null;
+
+//   /* optimistic like counter */
+//   const liveLikes =
+//     likesTotal +
+//     (likedMe && !article.likedBy?.[uid] ? 1 : 0) -
+//     (!likedMe && article.likedBy?.[uid] ? 1 : 0);
+
+//   /* fall-backs for author data */
+//   const name =
+//     author?.displayName ||
+//     article.authorName ||
+//     author?.username ||
+//     "Unknown author";
+//   const tagline = author?.tagline || article.authorTagline || "";
+//   const avatar =
+//     author?.avatarUrl || article.authorAvatar || "https://placehold.co/40x40" || currentUser.photoURL;
+//   const authorId = author?.uid;
+
+//   const articleHref = isDraft ? `/write/edit/${article.id}?draft=1` : `/article/${article.id}`;
+
+// const coverSrc =
+//     article.coverUrl || "https://placehold.co/800x450?text=No+Image";
+
+//   return (
+//     <MDBCard
+//       className={`h-100 position-relative ${
+//         isWinner ? "border border-warning border-3" : ""
+//       }`}
+//       style={{
+//        background: 'transparent',
+//       //  borderRadius: '0.5rem',         // rounded corners on entire card
+//        border: 'none',    // light border
+//        boxShadow: 'none',              // no MDB shadow
+//      }}
+//     >
+//       {/* ───── Bookmark ───── */}
+//     {!isDraft && (
+//       <MDBBtn
+//         size="sm"
+//         color="link"
+//         className="position-absolute p-0"
+//         style={{ top: 8, right: 8 }}
+//         onClick={doBookmark}
+//       >
+//         <MDBIcon
+//           icon="bookmark"
+//           fas={bookmarkedMe}
+//           far={!bookmarkedMe}
+//           style={{
+//             fontSize: "1.1rem",
+//             color: bookmarkedMe ? "#ffc107" : "#adb5bd",
+//           }}
+//         />
+//       </MDBBtn>
+//      )}
+//       {/* ───── Cover ───── */}
+//       <Link
+//         // to={`/article/${article.id}`}
+//         to={articleHref}
+//         className="text-reset text-decoration-none"
+//       >
+//          <div style={{ position: 'relative' }}>
+
+//           <div className="article-cover-wrapper">
+//             <img
+//               src={coverSrc}
+//               alt={article.title}
+//               loading="lazy"
+//               className={
+//                 "article-cover-img " + (imgLoaded ? "is-loaded" : "")
+//               }
+//               onLoad={() => setImgLoaded(true)}
+//             />
+//           </div>
+
+//            {/* <ProgressiveCover
+//             src={article.coverUrl}
+//             placeholder={article.coverThumbUrl}
+//             alt={article.title}
+//           /> */}
+
+//         {/* <MDBCardImage
+//           className="w-100"
+//           src={article.coverUrl || "https://placehold.co/800x450?text=No+Image"}
+//           alt={article.title}
+//           position="top"
+//           // loading="lazy" 
+//           style={{ objectFit: "cover", height: coverH, borderRadius: 0 }}
+//         /> */}
+       
+//            {isDraft && (
+//             <div
+//               style={{
+//                 position: 'absolute',
+//                 inset: 0,
+//                 display: 'flex',
+//                 alignItems: 'center',
+//                 justifyContent: 'center',
+//               }}
+//             >
+//               <span
+//                 style={{
+//                   padding: '10px 18px',
+//                   borderRadius: '14px',
+//                   border: '2px solid #FFFFFF',
+//                   color: '#FFFFFF',
+//                   fontFamily: 'Poppins, sans-serif',
+//                   fontWeight: 600,
+//                   fontSize: 16,
+//                   letterSpacing: '0.02em',
+//                   background: 'rgba(0,0,0,0.28)',
+//                   backdropFilter: 'blur(1px)',
+//                 }}
+//               >
+//                 Draft
+//               </span>
+//             </div>
+//           )}
+//         </div>       
+//       </Link>
+
+//       {/* ───── Body ───── */}
+//       <MDBCardBody
+//         // style={{ background: "#f5f6eb" }}
+//         style={{ background: "transparent", borderBottomLeftRadius: '0.5rem',borderBottomRightRadius: '0.5rem', }}
+//         className="d-flex px-0 flex-column gap-2 rounded-bottom-4"
+//       >
+//        <div>
+//           {new Date(article.createdAt).toLocaleDateString('en-US', {
+//              month: 'long',
+//              day:   'numeric',
+//              year:  'numeric'
+//            })}
+//         </div>
+
+
+
+//         {/* title */}
+//         <Link
+//           // to={`/article/${article.id}`}
+//            to={articleHref}
+//           className="text-reset text-decoration-none"
+//         >
+//           <h5
+//             className="fw-bold mb-1 lh-sm article-card-title"
+//             style={{ 
+//               margin: '0 0 0.75rem',  
+//               fontFamily: "Poppins, sans-serif",
+//               fontSize: `${titleRem}rem`,
+//               fontWeight: 400,
+//               fontSize: '18px',
+//               lineHeight: '1.4',
+//               color: '#0A0A0A', }}
+//             >
+//             {article.title}
+//           </h5>
+//         </Link>
+
+//         {/* tag */}
+//         {/* <span className="fw-semibold" style={{ color: "#516c3f" }}>
+//           #{article.category || "General"}
+//         </span> */}
+//         <div className="article-card-tags">
+//           {Array.isArray(article.tags) && article.tags.map(t => (
+//             // <MDBBadge key={t} pill color="success" className="px-2 py-1">
+//             //   #{t}
+//             // </MDBBadge>
+//             <span
+//               key={t}
+//               style={{
+//                 fontFamily: 'Poppins, sans-serif',
+//                 fontWeight: 600,           // SemiBold
+//                 fontSize: '14px',
+//                 lineHeight: '150%',
+//                 letterSpacing: '0px',
+//                 color: '#5C6B3C',
+//               }}
+//             >
+//               #{t}
+//             </span>
+//           ))}
+//         </div>
+
+//         {/* meta */}
+// <div className="d-flex align-items-center flex-nowrap gap-3 text-muted small">
+          
+
+// {/* <div className="d-flex align-items-center flex-nowrap gap-3 mt-1"> */}
+//           <span className="d-inline-flex align-items-center"> 
+//             {/* <MDBIcon far icon="eye" className="me-1" /> */}
+//              <img
+//               src={ViewIcon}
+//               alt=""
+//               className="article-meta-icon me-1"
+//             />
+//             {article.views || 0}
+//           </span>
+
+//           <span
+//             role="button"
+//             onClick={doLike}
+//             className="d-inline-flex align-items-center"
+//             style={{ color: likedMe ? "#0d6efd" : undefined }}
+//           >
+//             {/* <MDBIcon
+//               icon="thumbs-up"
+//               fas={likedMe}
+//               far={!likedMe}
+//               className="me-1"
+//             /> */}
+//             <img
+//               // fas={likedMe}
+//               // far={!likedMe}
+//               src={LikeIcon}
+//               alt=""
+//               className="article-meta-icon me-1"
+//             />
+//             {liveLikes}
+//           </span>
+
+//           <span role="button" onClick={() => setShowComments((x) => !x)}
+//              className="d-inline-flex align-items-center"
+//              >
+//             {/* <MDBIcon far icon="comment" className="me-1" /> */}
+//            <img
+//               src={CommentIcon}
+//               alt=""
+//               className="article-meta-icon me-1"
+//             />
+//             {commentsCnt}
+//           </span>
+//            </div>
+//         {/* </div> */}
+
+//         {/* author */}
+//         {authorId ? (
+//           <Link
+//             to={authorId === uid ? "/profile" : `/u/${author.username || authorId}`}
+//             className="d-flex align-items-center gap-2 mt-2 text-reset text-decoration-none"
+//           >
+//             <img
+//               src={avatar}
+//               alt={name}
+//               className="rounded-circle flex-shrink-0"
+//               width="40"
+//               height="40"
+//             />
+//             <div>
+//               <div 
+//               style={{
+//                 fontFamily: 'Poppins, sans-serif',
+//                 fontWeight: 600,
+//                 fontSize: '14px',
+//                 color: '#0A0A0A',
+//               }}
+//               className="fw-semibold">{name}</div>
+//               {tagline && <small 
+//               style={{
+//                   fontFamily: 'DM Sans, sans-serif',
+//                   fontWeight: 400,
+//                   fontSize: '12px',
+//                   color: '#6c757d',
+//                 }}
+//                 className="text-muted">{tagline}</small>}
+//             </div>
+//           </Link>
+//         ) : (
+//           <div className="d-flex align-items-center gap-2 mt-2">
+//             <img
+//               src={avatar}
+//               alt={name}
+//               className="rounded-circle  flex-shrink-0"
+//               width="40"
+//               height="40"
+//             />
+//             <div>
+//               <div className="fw-semibold">{name}</div>
+//               {tagline && <small className="text-muted">{tagline}</small>}
+//             </div>
+//           </div>
+//         )}
+
+//         {/* owner tools */}
+//         {isOwner && (
+//           <div
+//             className="d-flex gap-2 position-absolute"
+//             style={{ top: 8, left: 8 }}
+//           >
+//             <MDBBtn
+//               size="sm"
+//               color="link"
+//               className="p-0"
+//                aria-label="Edit article"
+//               onClick={e => {
+//                 e.preventDefault();
+//                 e.stopPropagation();
+//                 if (onEdit) onEdit(article);
+//                 else navigate(`/write/edit/${article.id}`);
+//               }}
+//             >
+//               {/* <MDBIcon fas icon="edit" /> */}
+//                <img
+//                 src={EditIcon}
+//                 alt="Edit"
+//                 className="article-tool-icon"
+//               />
+//             </MDBBtn>
+//             <MDBBtn
+//               size="sm"
+//               color="link"
+//               className="p-0 text-danger"
+//               aria-label="Delete article"
+//                onClick={e => {
+//         e.preventDefault();
+//         e.stopPropagation();
+//         if (!onDelete) return;
+//         if (window.confirm("Delete this item?")) onDelete(article);  // <-- pass object
+//       }}
+//             >
+//               {/* <MDBIcon fas icon="trash-alt" /> */}
+//               <img
+//                 src={DeleteIcon}
+//                 alt="Delete"
+//                 className="article-tool-icon"
+//               />
+//             </MDBBtn>
+//           </div>
+//         )}
+
+//         {/* comments inline */}
+//         {/* {showComments && (
+//           <div className="mt-3">
+//             <CommentList articleId={article.id} currentUser={currentUser} />
+//           </div>
+//         )} */}
+//       </MDBCardBody>
+//     </MDBCard>
+//   );
+// }
+
+// /* ─────────── simple responsive tweaks ─────────── */
+// const css = `
+
+// .article-meta-icon{
+//   width: 18px;
+//   height: 18px;
+//   object-fit: contain;
+//   display: inline-block;
+// }
+
+// .article-tool-icon{
+//   width: 18px;
+//   height: 18px;
+//   object-fit: contain;
+//   display: inline-block;
+// }
+
+// .article-card-title{
+//   display: -webkit-box;
+//   -webkit-box-orient: vertical;
+//   -webkit-line-clamp: 2;   /* show max 2 lines */
+//   overflow: hidden;
+//   text-overflow: ellipsis;
+//   min-height: 2.8em;       /* ≈ 2 lines with line-height:1.4 */
+// }
+
+//  /* 2-line clamp for tags */
+// .article-card-tags {
+//   font-family: 'Poppins', sans-serif;
+//   font-weight: 600;
+//   font-size: 14px;
+//   line-height: 1.4;
+//   letter-spacing: 0px;
+//   color: #5C6B3C;
+
+//   display: -webkit-box;
+//   -webkit-box-orient: vertical;
+//   -webkit-line-clamp: 2;      /* show max 2 lines */
+//   overflow: hidden;
+//   text-overflow: ellipsis;
+
+//   min-height: 2.8em;          /* same as title → perfect alignment */
+//   white-space: normal;
+// }
+
+
+// /* Progressive cover */
+// .article-cover-wrapper{
+//   position: relative;
+//   width: 100%;
+//   height: ${coverH}px;
+//   overflow: hidden;
+// }
+
+
+// .article-cover-img{
+//   position: absolute;
+//   inset: 0;
+//   width: 100%;
+//   height: 100%;
+//   object-fit: cover;
+//   transition: opacity 0.4s ease, filter 0.4s ease, transform 0.4s ease;
+// }
+
+// .article-cover-blur{
+//   filter: blur(12px);
+//   transform: scale(1.05);
+// }
+
+// .article-cover-img.is-hidden{
+//   opacity: 0;
+// }
+
+// .article-cover-img.is-visible{
+//   opacity: 1;
+// }
+
+
+// @media (max-width: 991.98px) {
+//   .mdb-card-image[style*="height: ${coverH}px"] { height: 220px !important; }
+//   h5[style*="font-size: ${titleRem}rem"]      { font-size: 1.2rem !important; }
+// }
+// @media (max-width: 767.98px) {
+//   .mdb-card-image[style*="height: ${coverH}px"] { height: 180px !important; }
+//   h5[style*="font-size: ${titleRem}rem"]      { font-size: 1.05rem !important; }
+// }`;
+// const styleSheet = document.createElement("style");
+// styleSheet.type = "text/css";
+// styleSheet.innerText = css;
+// document.head.appendChild(styleSheet);
+
+
+
+// above one is correct before cost cutting
 
 /* ------------------------------------------------------------------ */
 /*  src/components/cards/ArticleCard.jsx                              */
@@ -2387,13 +2933,11 @@
 import React, { useState, useEffect } from "react";
 import {
   MDBCard,
-  MDBBadge,
   MDBCardBody,
-  MDBCardImage,
   MDBIcon,
   MDBBtn,
 } from "mdb-react-ui-kit";
-import { Link, useNavigate  } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ref, onValue } from "firebase/database";
 import { rtdb } from "../../configs/firebase";
 import { useAuth } from "../../context/AuthContext";
@@ -2402,21 +2946,22 @@ import {
   streamLikeCount,
   streamCommentCount,
   toggleBookmark,
-  streamBookmarkCount,
 } from "../../configs/useArticles";
-import CommentList from "./CommentList";
-import '../../styles/design-tokens.css';
+import "../../styles/design-tokens.css";
 
 /* ─────────── ICON ASSETS (your SVGs) ─────────── */
-import ViewIcon from '../../images/icons/View Icon.svg';
-import CommentIcon from '../../images/icons/comment icon.svg';
-import EditIcon from '../../images/icons/edit icon.svg';
-import DeleteIcon from '../../images/icons/delete icon.svg';
-import LikeIcon from '../../images/icons/like icon.svg';
+import ViewIcon from "../../images/icons/View Icon.svg";
+import CommentIcon from "../../images/icons/comment icon.svg";
+import EditIcon from "../../images/icons/edit icon.svg";
+import DeleteIcon from "../../images/icons/delete icon.svg";
+import LikeIcon from "../../images/icons/like icon.svg";
 
 /* ─────────── responsive helpers ─────────── */
-const coverH   = 260; 
+const coverH = 260;
 const titleRem = 1.35;
+
+const COVER_FALLBACK = "https://placehold.co/800x450?text=No+Image";
+const AVATAR_FALLBACK = "https://placehold.co/40x40";
 
 export default function ArticleCard({
   article,
@@ -2424,9 +2969,9 @@ export default function ArticleCard({
   isOwner = false,
   onEdit,
   onDelete,
-  isWinner = false, 
-  isDraft = false, 
-  liveMeta = true,            
+  isWinner = false,
+  isDraft = false,
+  liveMeta = true,
 }) {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -2435,69 +2980,102 @@ export default function ArticleCard({
   /* ─────────── live state ─────────── */
   const [likedMe, setLikedMe] = useState(false);
 
-  // seed counters from whatever is already in the snapshot
+  // Seed counter from snapshot, then Firebase listener keeps it updated.
   const [likesTotal, setLikesTotal] = useState(
     article?.likesCount ??
       (article?.likedBy ? Object.keys(article.likedBy).length : 0)
   );
+
   const [bookmarkedMe, setBookmarkedMe] = useState(false);
   const [commentsCnt, setCommentsCnt] = useState(article?.commentsCount ?? 0);
   const [showComments, setShowComments] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [coverError, setCoverError] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+
   /* ─────────── firebase listeners ─────────── */
   useEffect(() => {
     if (!article?.id || !liveMeta) return;
 
-    // listeners that *do* need uid
     let offLikeMine = () => {};
-    let offBmMine   = () => {};
+    let offBmMine = () => {};
+
     if (uid) {
       offLikeMine = onValue(
         ref(rtdb, `articles/${article.id}/likedBy/${uid}`),
-        (s) => setLikedMe(!!s.val())
+        (snapshot) => setLikedMe(!!snapshot.val())
       );
+
       offBmMine = onValue(
         ref(rtdb, `articles/${article.id}/bookmarkedBy/${uid}`),
-        (s) => setBookmarkedMe(!!s.val())
+        (snapshot) => setBookmarkedMe(!!snapshot.val())
       );
     }
 
-    // counters
-    const offLikesTot = streamLikeCount(article.id, setLikesTotal);
-    const offComTot   = streamCommentCount(article.id, setCommentsCnt);
+    const offLikesTotal = streamLikeCount(article.id, setLikesTotal);
+    const offCommentsTotal = streamCommentCount(article.id, setCommentsCnt);
 
-    // (we don’t show the bookmark counter in this compact card)
-    const offBmTot    = streamBookmarkCount(article.id, () => {});
+    /*
+     * Cost saving:
+     * Removed streamBookmarkCount(article.id, () => {})
+     * because this compact card does not display bookmark count.
+     * Bookmark icon state still works through offBmMine above.
+     */
     return () => {
-      offLikeMine(); offBmMine(); offLikesTot(); offComTot(); offBmTot();
+      offLikeMine();
+      offBmMine();
+      offLikesTotal();
+      offCommentsTotal();
     };
   }, [article?.id, uid, liveMeta]);
+
+  useEffect(() => {
+    setImgLoaded(false);
+    setCoverError(false);
+    setAvatarError(false);
+  }, [article?.id, article?.coverUrl, author?.avatarUrl, article?.authorAvatar]);
 
   /* ─────────── actions ─────────── */
   const doLike = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!uid) return;
-    setLikedMe((x) => !x);
-    likeArticle(article.id, uid).catch(() => setLikedMe((x) => !x));
+
+    if (!uid || !article?.id) return;
+
+    /*
+     * Important:
+     * Do not optimistically change likedMe or likesTotal here.
+     * likedMe is updated by articles/{id}/likedBy/{uid}
+     * likesTotal is updated by articles/{id}/likesCount
+     * This prevents the old +2 / -2 bug.
+     */
+    likeArticle(article.id, uid).catch((err) => {
+      console.error("likeArticle failed:", err);
+    });
   };
 
   const doBookmark = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!uid) return;
-    setBookmarkedMe((x) => !x);
-    toggleBookmark(article.id, uid).catch(() => setBookmarkedMe((x) => !x));
+
+    if (!uid || !article?.id) return;
+
+    setBookmarkedMe((value) => !value);
+
+    toggleBookmark(article.id, uid).catch((err) => {
+      console.error("toggleBookmark failed:", err);
+      setBookmarkedMe((value) => !value);
+    });
   };
 
   /* ─────────── render ─────────── */
   if (!article) return null;
 
-  /* optimistic like counter */
-  const liveLikes =
-    likesTotal +
-    (likedMe && !article.likedBy?.[uid] ? 1 : 0) -
-    (!likedMe && article.likedBy?.[uid] ? 1 : 0);
+  /*
+   * Live Firebase counter.
+   * Do not add/subtract optimistic values here.
+   */
+  const liveLikes = likesTotal;
 
   /* fall-backs for author data */
   const name =
@@ -2505,15 +3083,25 @@ export default function ArticleCard({
     article.authorName ||
     author?.username ||
     "Unknown author";
+
   const tagline = author?.tagline || article.authorTagline || "";
+
   const avatar =
-    author?.avatarUrl || article.authorAvatar || "https://placehold.co/40x40" || currentUser.photoURL;
+    !avatarError
+      ? author?.avatarUrl ||
+        article.authorAvatar ||
+        currentUser?.photoURL ||
+        AVATAR_FALLBACK
+      : AVATAR_FALLBACK;
+
   const authorId = author?.uid;
 
-  const articleHref = isDraft ? `/write/edit/${article.id}?draft=1` : `/article/${article.id}`;
+  const articleHref = isDraft
+    ? `/write/edit/${article.id}?draft=1`
+    : `/article/${article.id}`;
 
-const coverSrc =
-    article.coverUrl || "https://placehold.co/800x450?text=No+Image";
+  const coverSrc =
+    !coverError && article.coverUrl ? article.coverUrl : COVER_FALLBACK;
 
   return (
     <MDBCard
@@ -2521,172 +3109,139 @@ const coverSrc =
         isWinner ? "border border-warning border-3" : ""
       }`}
       style={{
-       background: 'transparent',
-      //  borderRadius: '0.5rem',         // rounded corners on entire card
-       border: 'none',    // light border
-       boxShadow: 'none',              // no MDB shadow
-     }}
+        background: "transparent",
+        border: "none",
+        boxShadow: "none",
+      }}
     >
       {/* ───── Bookmark ───── */}
-    {!isDraft && (
-      <MDBBtn
-        size="sm"
-        color="link"
-        className="position-absolute p-0"
-        style={{ top: 8, right: 8 }}
-        onClick={doBookmark}
-      >
-        <MDBIcon
-          icon="bookmark"
-          fas={bookmarkedMe}
-          far={!bookmarkedMe}
-          style={{
-            fontSize: "1.1rem",
-            color: bookmarkedMe ? "#ffc107" : "#adb5bd",
-          }}
-        />
-      </MDBBtn>
-     )}
-      {/* ───── Cover ───── */}
-      <Link
-        // to={`/article/${article.id}`}
-        to={articleHref}
-        className="text-reset text-decoration-none"
-      >
-         <div style={{ position: 'relative' }}>
+      {!isDraft && (
+        <MDBBtn
+          size="sm"
+          color="link"
+          className="position-absolute p-0"
+          style={{ top: 8, right: 8 }}
+          onClick={doBookmark}
+        >
+          <MDBIcon
+            icon="bookmark"
+            fas={bookmarkedMe}
+            far={!bookmarkedMe}
+            style={{
+              fontSize: "1.1rem",
+              color: bookmarkedMe ? "#ffc107" : "#adb5bd",
+            }}
+          />
+        </MDBBtn>
+      )}
 
+      {/* ───── Cover ───── */}
+      <Link to={articleHref} className="text-reset text-decoration-none">
+        <div style={{ position: "relative" }}>
           <div className="article-cover-wrapper">
             <img
               src={coverSrc}
-              alt={article.title}
+              alt={article.title || "Article cover"}
               loading="lazy"
-              className={
-                "article-cover-img " + (imgLoaded ? "is-loaded" : "")
-              }
+              decoding="async"
+              className={"article-cover-img " + (imgLoaded ? "is-loaded" : "")}
               onLoad={() => setImgLoaded(true)}
+              onError={() => {
+                setCoverError(true);
+                setImgLoaded(true);
+              }}
             />
           </div>
 
-           {/* <ProgressiveCover
-            src={article.coverUrl}
-            placeholder={article.coverThumbUrl}
-            alt={article.title}
-          /> */}
-
-        {/* <MDBCardImage
-          className="w-100"
-          src={article.coverUrl || "https://placehold.co/800x450?text=No+Image"}
-          alt={article.title}
-          position="top"
-          // loading="lazy" 
-          style={{ objectFit: "cover", height: coverH, borderRadius: 0 }}
-        /> */}
-       
-           {isDraft && (
+          {isDraft && (
             <div
               style={{
-                position: 'absolute',
+                position: "absolute",
                 inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <span
                 style={{
-                  padding: '10px 18px',
-                  borderRadius: '14px',
-                  border: '2px solid #FFFFFF',
-                  color: '#FFFFFF',
-                  fontFamily: 'Poppins, sans-serif',
+                  padding: "10px 18px",
+                  borderRadius: "14px",
+                  border: "2px solid #FFFFFF",
+                  color: "#FFFFFF",
+                  fontFamily: "Poppins, sans-serif",
                   fontWeight: 600,
                   fontSize: 16,
-                  letterSpacing: '0.02em',
-                  background: 'rgba(0,0,0,0.28)',
-                  backdropFilter: 'blur(1px)',
+                  letterSpacing: "0.02em",
+                  background: "rgba(0,0,0,0.28)",
+                  backdropFilter: "blur(1px)",
                 }}
               >
                 Draft
               </span>
             </div>
           )}
-        </div>       
+        </div>
       </Link>
 
       {/* ───── Body ───── */}
       <MDBCardBody
-        // style={{ background: "#f5f6eb" }}
-        style={{ background: "transparent", borderBottomLeftRadius: '0.5rem',borderBottomRightRadius: '0.5rem', }}
+        style={{
+          background: "transparent",
+          borderBottomLeftRadius: "0.5rem",
+          borderBottomRightRadius: "0.5rem",
+        }}
         className="d-flex px-0 flex-column gap-2 rounded-bottom-4"
       >
-       <div>
-          {new Date(article.createdAt).toLocaleDateString('en-US', {
-             month: 'long',
-             day:   'numeric',
-             year:  'numeric'
-           })}
+        <div>
+          {new Date(article.createdAt).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}
         </div>
 
-
-
         {/* title */}
-        <Link
-          // to={`/article/${article.id}`}
-           to={articleHref}
-          className="text-reset text-decoration-none"
-        >
+        <Link to={articleHref} className="text-reset text-decoration-none">
           <h5
             className="fw-bold mb-1 lh-sm article-card-title"
-            style={{ 
-              margin: '0 0 0.75rem',  
+            style={{
+              margin: "0 0 0.75rem",
               fontFamily: "Poppins, sans-serif",
-              fontSize: `${titleRem}rem`,
               fontWeight: 400,
-              fontSize: '18px',
-              lineHeight: '1.4',
-              color: '#0A0A0A', }}
-            >
+              fontSize: "18px",
+              lineHeight: "1.4",
+              color: "#0A0A0A",
+            }}
+          >
             {article.title}
           </h5>
         </Link>
 
-        {/* tag */}
-        {/* <span className="fw-semibold" style={{ color: "#516c3f" }}>
-          #{article.category || "General"}
-        </span> */}
+        {/* tags */}
         <div className="article-card-tags">
-          {Array.isArray(article.tags) && article.tags.map(t => (
-            // <MDBBadge key={t} pill color="success" className="px-2 py-1">
-            //   #{t}
-            // </MDBBadge>
-            <span
-              key={t}
-              style={{
-                fontFamily: 'Poppins, sans-serif',
-                fontWeight: 600,           // SemiBold
-                fontSize: '14px',
-                lineHeight: '150%',
-                letterSpacing: '0px',
-                color: '#5C6B3C',
-              }}
-            >
-              #{t}
-            </span>
-          ))}
+          {Array.isArray(article.tags) &&
+            article.tags.map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  fontFamily: "Poppins, sans-serif",
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  lineHeight: "150%",
+                  letterSpacing: "0px",
+                  color: "#5C6B3C",
+                }}
+              >
+                #{tag}
+              </span>
+            ))}
         </div>
 
         {/* meta */}
-<div className="d-flex align-items-center flex-nowrap gap-3 text-muted small">
-          
-
-{/* <div className="d-flex align-items-center flex-nowrap gap-3 mt-1"> */}
-          <span className="d-inline-flex align-items-center"> 
-            {/* <MDBIcon far icon="eye" className="me-1" /> */}
-             <img
-              src={ViewIcon}
-              alt=""
-              className="article-meta-icon me-1"
-            />
+        <div className="d-flex align-items-center flex-nowrap gap-3 text-muted small">
+          <span className="d-inline-flex align-items-center">
+            <img src={ViewIcon} alt="" className="article-meta-icon me-1" />
             {article.views || 0}
           </span>
 
@@ -2696,35 +3251,19 @@ const coverSrc =
             className="d-inline-flex align-items-center"
             style={{ color: likedMe ? "#0d6efd" : undefined }}
           >
-            {/* <MDBIcon
-              icon="thumbs-up"
-              fas={likedMe}
-              far={!likedMe}
-              className="me-1"
-            /> */}
-            <img
-              // fas={likedMe}
-              // far={!likedMe}
-              src={LikeIcon}
-              alt=""
-              className="article-meta-icon me-1"
-            />
+            <img src={LikeIcon} alt="" className="article-meta-icon me-1" />
             {liveLikes}
           </span>
 
-          <span role="button" onClick={() => setShowComments((x) => !x)}
-             className="d-inline-flex align-items-center"
-             >
-            {/* <MDBIcon far icon="comment" className="me-1" /> */}
-           <img
-              src={CommentIcon}
-              alt=""
-              className="article-meta-icon me-1"
-            />
+          <span
+            role="button"
+            onClick={() => setShowComments((value) => !value)}
+            className="d-inline-flex align-items-center"
+          >
+            <img src={CommentIcon} alt="" className="article-meta-icon me-1" />
             {commentsCnt}
           </span>
-           </div>
-        {/* </div> */}
+        </div>
 
         {/* author */}
         {authorId ? (
@@ -2738,24 +3277,37 @@ const coverSrc =
               className="rounded-circle flex-shrink-0"
               width="40"
               height="40"
+              loading="lazy"
+              decoding="async"
+              onError={() => setAvatarError(true)}
             />
+
             <div>
-              <div 
-              style={{
-                fontFamily: 'Poppins, sans-serif',
-                fontWeight: 600,
-                fontSize: '14px',
-                color: '#0A0A0A',
-              }}
-              className="fw-semibold">{name}</div>
-              {tagline && <small 
-              style={{
-                  fontFamily: 'DM Sans, sans-serif',
-                  fontWeight: 400,
-                  fontSize: '12px',
-                  color: '#6c757d',
+              <div
+                style={{
+                  fontFamily: "Poppins, sans-serif",
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  color: "#0A0A0A",
                 }}
-                className="text-muted">{tagline}</small>}
+                className="fw-semibold"
+              >
+                {name}
+              </div>
+
+              {tagline && (
+                <small
+                  style={{
+                    fontFamily: "DM Sans, sans-serif",
+                    fontWeight: 400,
+                    fontSize: "12px",
+                    color: "#6c757d",
+                  }}
+                  className="text-muted"
+                >
+                  {tagline}
+                </small>
+              )}
             </div>
           </Link>
         ) : (
@@ -2763,10 +3315,14 @@ const coverSrc =
             <img
               src={avatar}
               alt={name}
-              className="rounded-circle  flex-shrink-0"
+              className="rounded-circle flex-shrink-0"
               width="40"
               height="40"
+              loading="lazy"
+              decoding="async"
+              onError={() => setAvatarError(true)}
             />
+
             <div>
               <div className="fw-semibold">{name}</div>
               {tagline && <small className="text-muted">{tagline}</small>}
@@ -2784,49 +3340,37 @@ const coverSrc =
               size="sm"
               color="link"
               className="p-0"
-               aria-label="Edit article"
-              onClick={e => {
+              aria-label="Edit article"
+              onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+
                 if (onEdit) onEdit(article);
                 else navigate(`/write/edit/${article.id}`);
               }}
             >
-              {/* <MDBIcon fas icon="edit" /> */}
-               <img
-                src={EditIcon}
-                alt="Edit"
-                className="article-tool-icon"
-              />
+              <img src={EditIcon} alt="Edit" className="article-tool-icon" />
             </MDBBtn>
+
             <MDBBtn
               size="sm"
               color="link"
               className="p-0 text-danger"
               aria-label="Delete article"
-               onClick={e => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!onDelete) return;
-        if (window.confirm("Delete this item?")) onDelete(article);  // <-- pass object
-      }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (!onDelete) return;
+                if (window.confirm("Delete this item?")) onDelete(article);
+              }}
             >
-              {/* <MDBIcon fas icon="trash-alt" /> */}
-              <img
-                src={DeleteIcon}
-                alt="Delete"
-                className="article-tool-icon"
-              />
+              <img src={DeleteIcon} alt="Delete" className="article-tool-icon" />
             </MDBBtn>
           </div>
         )}
 
-        {/* comments inline */}
-        {/* {showComments && (
-          <div className="mt-3">
-            <CommentList articleId={article.id} currentUser={currentUser} />
-          </div>
-        )} */}
+        {/* comments inline intentionally disabled */}
       </MDBCardBody>
     </MDBCard>
   );
@@ -2834,7 +3378,6 @@ const coverSrc =
 
 /* ─────────── simple responsive tweaks ─────────── */
 const css = `
-
 .article-meta-icon{
   width: 18px;
   height: 18px;
@@ -2852,13 +3395,12 @@ const css = `
 .article-card-title{
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;   /* show max 2 lines */
+  -webkit-line-clamp: 2;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-height: 2.8em;       /* ≈ 2 lines with line-height:1.4 */
+  min-height: 2.8em;
 }
 
- /* 2-line clamp for tags */
 .article-card-tags {
   font-family: 'Poppins', sans-serif;
   font-weight: 600;
@@ -2869,23 +3411,20 @@ const css = `
 
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;      /* show max 2 lines */
+  -webkit-line-clamp: 2;
   overflow: hidden;
   text-overflow: ellipsis;
 
-  min-height: 2.8em;          /* same as title → perfect alignment */
+  min-height: 2.8em;
   white-space: normal;
 }
 
-
-/* Progressive cover */
 .article-cover-wrapper{
   position: relative;
   width: 100%;
   height: ${coverH}px;
   overflow: hidden;
 }
-
 
 .article-cover-img{
   position: absolute;
@@ -2909,16 +3448,24 @@ const css = `
   opacity: 1;
 }
 
-
 @media (max-width: 991.98px) {
   .mdb-card-image[style*="height: ${coverH}px"] { height: 220px !important; }
-  h5[style*="font-size: ${titleRem}rem"]      { font-size: 1.2rem !important; }
+  h5[style*="font-size: ${titleRem}rem"] { font-size: 1.2rem !important; }
 }
+
 @media (max-width: 767.98px) {
   .mdb-card-image[style*="height: ${coverH}px"] { height: 180px !important; }
-  h5[style*="font-size: ${titleRem}rem"]      { font-size: 1.05rem !important; }
-}`;
-const styleSheet = document.createElement("style");
-styleSheet.type = "text/css";
-styleSheet.innerText = css;
-document.head.appendChild(styleSheet);
+  h5[style*="font-size: ${titleRem}rem"] { font-size: 1.05rem !important; }
+}
+`;
+
+if (
+  typeof document !== "undefined" &&
+  !document.getElementById("article-card-inline-css")
+) {
+  const styleSheet = document.createElement("style");
+  styleSheet.id = "article-card-inline-css";
+  styleSheet.type = "text/css";
+  styleSheet.innerText = css;
+  document.head.appendChild(styleSheet);
+}
