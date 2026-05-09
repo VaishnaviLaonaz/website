@@ -2,45 +2,96 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+
+    <!-- Primary favicon/app icons -->
     <link rel="icon" type="image/png" href="%PUBLIC_URL%/logo2.png" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo2.png" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap"
-       rel="stylesheet"
-/>
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+    <!-- Mobile/browser basics -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#5C6B3C" />
+    <meta name="application-name" content="Laonaz" />
+
+    <!-- Primary SEO -->
+    <title>Laonaz | Farming Knowledge, Organic Farming & Smart Agriculture Community</title>
     <meta
       name="description"
-      content="Web site created using create-react-app"
+      content="Laonaz is a farming knowledge community for organic farming, smart agriculture, seeds, soil health, water management, government schemes, farm technology, crop education, and sustainable food systems."
     />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+    <meta
+      name="keywords"
+      content="farming, agriculture, organic farming, smart farming, AI in agriculture, farm technology, seeds, soil health, water management, crop protection, government farming schemes, market prices, sustainable farming, organic food"
+    />
+    <meta name="author" content="Laonaz" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://laonaz.co.in/" />
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>Laonaz | Farming Knowledge Community</title>
+    <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
+    <meta property="og:site_name" content="Laonaz" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Laonaz | Farming Knowledge Community" />
+    <meta
+      property="og:description"
+      content="Explore farming knowledge, organic farming, government schemes, seeds, soil health, smart agriculture, AI farming technology, and sustainable food education."
+    />
+    <meta property="og:url" content="https://laonaz.co.in/" />
+    <meta property="og:image" content="https://laonaz.co.in/logo2.png" />
+    <meta property="og:image:alt" content="Laonaz farming knowledge community" />
+
+    <!-- Twitter/X preview -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Laonaz | Farming Knowledge Community" />
+    <meta
+      name="twitter:description"
+      content="Farming knowledge, organic farming, seeds, smart agriculture, AI farming technology, government schemes, and sustainable food education."
+    />
+    <meta name="twitter:image" content="https://laonaz.co.in/logo2.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Organization structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Laonaz",
+        "url": "https://laonaz.co.in",
+        "logo": "https://laonaz.co.in/logo2.png",
+        "description": "Laonaz is a farming knowledge community for agriculture education, organic farming, smart farming, seeds, soil health, water management, government schemes, and sustainable food systems.",
+        "sameAs": [
+          "https://www.instagram.com/laonaz.community/"
+        ]
+      }
+    </script>
+
+    <!-- Website structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Laonaz",
+        "url": "https://laonaz.co.in",
+        "description": "Farming knowledge, organic farming, government schemes, smart agriculture, AI farming technology, seeds, crop education, and sustainable food systems.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://laonaz.co.in/articlesPage?search={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
   </head>
+
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      Laonaz requires JavaScript to run. Visit Laonaz for farming knowledge, organic farming, smart agriculture, seeds, soil health, water management, and government farming schemes.
+    </noscript>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
   </body>
 </html>

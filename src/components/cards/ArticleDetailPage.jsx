@@ -3112,6 +3112,65 @@ import "../../styles/ArticleDetailsPage.css";
 const RELATED_SOURCE_LIMIT = 20;
 const CARD_LIMIT = 4;
 
+
+function upsertMeta(selector, attrs) {
+  let element = document.head.querySelector(selector);
+
+  if (!element) {
+    element = document.createElement("meta");
+    document.head.appendChild(element);
+  }
+
+  Object.entries(attrs).forEach(([key, value]) => {
+    element.setAttribute(key, value);
+  });
+}
+
+function upsertLink(selector, attrs) {
+  let element = document.head.querySelector(selector);
+
+  if (!element) {
+    element = document.createElement("link");
+    document.head.appendChild(element);
+  }
+
+  Object.entries(attrs).forEach(([key, value]) => {
+    element.setAttribute(key, value);
+  });
+}
+
+function upsertJsonLd(id, data) {
+  let element = document.getElementById(id);
+
+  if (!element) {
+    element = document.createElement("script");
+    element.id = id;
+    element.type = "application/ld+json";
+    document.head.appendChild(element);
+  }
+
+  element.textContent = JSON.stringify(data);
+}
+
+function stripHtml(html = "") {
+  return String(html)
+    .replace(/<[^>]*>?/gm, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function makeDescription(article) {
+  const fromExcerpt = article?.excerpt || "";
+  const fromBody = stripHtml(article?.body || "");
+
+  const text =
+    fromExcerpt ||
+    fromBody ||
+    "Read farming knowledge, organic farming, smart agriculture, soil health, seeds, government schemes, and sustainable farming articles on Laonaz.";
+
+  return text.length > 155 ? `${text.slice(0, 152).trim()}...` : text;
+}
+
 export default function ArticleDetailPage() {
   const { articleId } = useParams();
   const { currentUser } = useAuth();
@@ -3198,6 +3257,127 @@ export default function ArticleDetailPage() {
    * - new articles: body from articleBodies/{articleId}/body
    * - old articles: fallback body from articles/{articleId}/body
    */
+  useEffect(() => {
+  if (!article) return;
+
+  const siteName = "Laonaz";
+  const baseUrl = "https://laonaz.co.in";
+  const articleUrl = `${baseUrl}/article/${articleId}`;
+
+  const title = article.title
+    ? `${article.title} | Laonaz`
+    : "Farming Article | Laonaz";
+
+  const description = makeDescription(article);
+  const imageUrl = article.coverUrl || `${baseUrl}/logo2.png`;
+
+  document.title = title;
+
+  upsertMeta('meta[name="description"]', {
+    name: "description",
+    content: description,
+  });
+
+  upsertMeta('meta[name="robots"]', {
+    name: "robots",
+    content: "index, follow, max-image-preview:large",
+  });
+
+  upsertLink('link[rel="canonical"]', {
+    rel: "canonical",
+    href: articleUrl,
+  });
+
+  upsertMeta('meta[property="og:type"]', {
+    property: "og:type",
+    content: "article",
+  });
+
+  upsertMeta('meta[property="og:site_name"]', {
+    property: "og:site_name",
+    content: siteName,
+  });
+
+  upsertMeta('meta[property="og:title"]', {
+    property: "og:title",
+    content: title,
+  });
+
+  upsertMeta('meta[property="og:description"]', {
+    property: "og:description",
+    content: description,
+  });
+
+  upsertMeta('meta[property="og:url"]', {
+    property: "og:url",
+    content: articleUrl,
+  });
+
+  upsertMeta('meta[property="og:image"]', {
+    property: "og:image",
+    content: imageUrl,
+  });
+
+  upsertMeta('meta[name="twitter:card"]', {
+    name: "twitter:card",
+    content: "summary_large_image",
+  });
+
+  upsertMeta('meta[name="twitter:title"]', {
+    name: "twitter:title",
+    content: title,
+  });
+
+  upsertMeta('meta[name="twitter:description"]', {
+    name: "twitter:description",
+    content: description,
+  });
+
+  upsertMeta('meta[name="twitter:image"]', {
+    name: "twitter:image",
+    content: imageUrl,
+  });
+
+  const publishedDate = article.createdAt
+    ? new Date(article.createdAt).toISOString()
+    : new Date().toISOString();
+
+  const modifiedDate = article.updatedAt
+    ? new Date(article.updatedAt).toISOString()
+    : publishedDate;
+
+  upsertJsonLd("laonaz-article-jsonld", {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: article.title || "Laonaz Farming Article",
+    description,
+    image: imageUrl,
+    author: {
+      "@type": "Person",
+      name:
+        author?.username ||
+        author?.displayName ||
+        `${author?.firstName || ""} ${author?.lastName || ""}`.trim() ||
+        "Laonaz Author",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Laonaz",
+      logo: {
+        "@type": "ImageObject",
+        url: `${baseUrl}/logo2.png`,
+      },
+    },
+    datePublished: publishedDate,
+    dateModified: modifiedDate,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": articleUrl,
+    },
+    keywords: Array.isArray(article.tags) ? article.tags.join(", ") : "",
+  });
+}, [article, author, articleId]);
+
   useEffect(() => {
     let alive = true;
 
